@@ -14,7 +14,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 @CommandLine.Command(
-    description = "Побудувати фінальний DOCX на основі наданого MD-файлу"
+        description = "Побудувати фінальний DOCX на основі наданого MD-файлу"
 )
 public class Entrypoint implements Runnable {
 
@@ -31,13 +31,17 @@ public class Entrypoint implements Runnable {
     @CommandLine.Option(names = {"-i", "--inputReportMd"},
             description = "Назва вхідного звіту MD")
     private void setInputReportMd(File inputReportMd) throws IOException {
+        log.debug("Провіряєм, яку хуйню нам підсунули як вхідний MD: {}", inputReportMd);
         if (!inputReportMd.exists()) {
+            log.debug("Пізда, файла {} нема, юзер — гавнюк", inputReportMd);
             throw new CommandLine.ParameterException(
                     new CommandLine(this), "Гавнюк, файла " + inputReportMd + " не існує!");
         }
 
+        log.debug("Читаєм перші байти, шоб поняти, чи це реально MD з фронт-маттером");
         String text = Files.readString(inputReportMd.toPath()).trim();
         if (!text.startsWith("---") || !inputReportMd.getName().endsWith(".md")) {
+            log.debug("Шо це за параша? {} — це не MD і там нема потрібних приколів!", inputReportMd.getName());
             throw new CommandLine.ParameterException(
                     new CommandLine(this), "Гавнюк, файл " + inputReportMd + " не є MD і не має потрібних приколів!");
         }
@@ -58,34 +62,44 @@ public class Entrypoint implements Runnable {
 
     @Override
     public void run() {
+        log.debug("Запускаєм цю шарманку, блядь, в потоці main");
         try {
             if (inputReportMd == null) {
+                log.debug("Юзер провтикав вказати MD, будем шукати rom.md у помойці за шляхом: {}", contextPath);
                 setInputReportMd(contextPath.resolve("rom.md").toFile());
             }
 
             if (templateFile == null) {
+                log.debug("Темплейта нема, берем вбудований з ресурсів. Надійся, шо він там лежить, сука");
                 templateFile = Paths.get(getClass().getResource("/template.docx").toURI()).toFile();
             }
 
+            log.debug("Перетворюєм шлях до MD у URI: {}", inputReportMd.toURI());
             URI romSource = inputReportMd.toURI();
 
+            log.debug("Визиваєм магію створення ROM об'єкта");
             var rom = ReportObjectModel.create(romSource);
+
+            log.debug("Єбать, воно вижило! Ось який ROM ми зліпили: {}", rom);
+
+            log.debug("Запускаєм головний завод по генерації гівна. DOCX: {}, PDF: {}", isDocxGenerate, isPdfGenerate);
             ReportBuilder.generate(rom,
                     templateFile,
                     outputPath.getAbsolutePath(),
                     contextPath,
                     isDocxGenerate,
                     isPdfGenerate);
-
-            log.debug("Built ROM: " + rom);
         }
         catch (Exception e) {
-            log.error(e.getMessage());
+            log.error("Всьо, пізда, приїхали! Помилка: {}", e.getMessage());
+            log.error("Якась сперма вилізла в Entrypoint, розбирайся нахуй!");
         }
     }
 
     public static void main(String[] args) throws Exception {
+        log.debug("Точка входу, блядь. Щас Picocli розкидає аргументи як шлюх");
         int exitCode = new CommandLine(new Entrypoint()).execute(args);
+        log.debug("Програма закончілась з кодом {}. Валим нахуй!", exitCode);
         System.exit(exitCode);
     }
 }

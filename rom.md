@@ -12,20 +12,15 @@ properties:
 code_paths:  
 - "*/**/**.java"
 photos:
-#    text:
-#        penis:
-#            name: Entrypoint.java
-#            label: Будувач фотографій
     bash:
-        alahuakba:
-            label: ZZZZ
+        gitler:
+            label: LIST
             runs:
+              - command: echo 1111
+              - command: echo 2222
+              - command: echo 3333
               - command: python playground/lab3.py
-              - command: echo "ХУЙ іііііі"
-    images:
-        histgr:
-            file: histogram_x1.png
-            label: penis
+                input: "Yes"
 ---
 йцуцйцуй
 йуйц
@@ -34,6 +29,4 @@ photos:
 
 ### А тут якась цікава гітограма!!!
 
-{{histgr}}
-
-{{alahuakba}}
+{{gitler}}

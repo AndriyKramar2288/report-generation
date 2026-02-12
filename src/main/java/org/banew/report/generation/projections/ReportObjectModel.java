@@ -16,7 +16,8 @@ import lombok.NoArgsConstructor;
 import org.banew.report.generation.projections.builders.BashPhotoBuilder;
 import org.banew.report.generation.projections.builders.DirectPhotoBuilder;
 import org.banew.report.generation.projections.builders.FilePhotoBuilder;
-import org.banew.report.generation.projections.builders.PhotoBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -30,6 +31,8 @@ import java.util.Map;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ReportObjectModel {
+
+    private static final Logger log = LoggerFactory.getLogger(ReportObjectModel.class);
 
     private Map<String, String> properties;
     private Photos photos;
@@ -47,37 +50,53 @@ public class ReportObjectModel {
     protected ReportObjectModel() {}
 
     public static ReportObjectModel create(URI romSource) {
+        log.debug("Блядь, пробуєм роздуплити цей файл: {}", romSource);
         try {
+            log.debug("Читаєм цю хуйню з діска, надійся, шо там не пусто");
             String content = Files.readString(Paths.get(romSource));
 
+            log.debug("Настраюєм цей йобаний Flexmark, шоб він схавав наш YAML");
             MutableDataSet options = new MutableDataSet();
             options.set(Parser.EXTENSIONS, Collections.singletonList(YamlFrontMatterExtension.create()));
             Parser parser = Parser.builder(options).build();
             HtmlRenderer renderer = HtmlRenderer.builder(options).build();
 
+            log.debug("Парсим цю залупу, щас буде видно, хто де насрав");
             Node document = parser.parse(content);
             Node metadataBlock = document.getFirstChild();
 
             if (metadataBlock instanceof YamlFrontMatterBlock) {
+                log.debug("Опа, надибали метадані! Видирай цей YAML нахуй");
                 String yamlText = metadataBlock.getChars().toString();
 
+                log.debug("Запрягаєм Jackson, хай мапить цей брєд на об'єкт");
                 ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
 
                 var obj = mapper.readValue(yamlText, ReportObjectModel.class);
 
+                log.debug("Рендерим остальну парашу в HTML, шоб було красиво, блядь");
                 String htmlContent = renderer.render(
                         parser.parse(content.substring(metadataBlock.getEndOffset()).trim()));
 
                 obj.setContent(htmlContent);
+
+                log.debug("Дописуєм рік, бо цей підарас сам не знає, яке сьогодні число");
                 obj.getProperties().put("year", LocalDateTime.now().getYear() + "");
 
+                log.debug("Всьо, об'єкт зліпили, не розсипався — і то заєбісь");
                 return obj;
+            } else {
+                log.debug("Сука, де метадані? Ти шо, здурів, таку парашу підсовувать?");
             }
         } catch (JacksonException jacksonException) {
+            log.debug("Всьо, пізда, Джексон подавився твоїм YAML-ом: {}", jacksonException.getMessage());
             throw new RuntimeException("failed to parse note.md", jacksonException);
         } catch (IOException ioException) {
+            log.debug("Якийсь гондон забрав файл або диск вмер: {}", ioException.getMessage());
             throw new RuntimeException("failed to read file", ioException);
         }
+
+        log.debug("Вертаєм null, бо ми рукожопи і нічо не знайшли");
         return null;
     }
 }

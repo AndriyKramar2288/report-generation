@@ -2,6 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
+if (input("Aboba?") == "Yes"):
+    print("Fine")
+
 # Завдання 1: Дослідження одновимірної випадкової величини X1
 np.random.seed(42)
 sigma = 5
