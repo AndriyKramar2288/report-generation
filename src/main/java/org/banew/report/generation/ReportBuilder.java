@@ -1,177 +1,171 @@
 package org.banew.report.generation;
 
-import com.vladsch.flexmark.ast.Heading;
-import com.vladsch.flexmark.ast.Paragraph;
-import com.vladsch.flexmark.parser.Parser;
-import com.vladsch.flexmark.util.ast.Node;
-import com.vladsch.flexmark.util.ast.NodeVisitor;
-import com.vladsch.flexmark.util.ast.VisitHandler;
+import fr.opensagres.xdocreport.core.XDocReportException;
+import fr.opensagres.xdocreport.core.document.SyntaxKind;
+import fr.opensagres.xdocreport.document.IXDocReport;
+import fr.opensagres.xdocreport.document.registry.XDocReportRegistry;
+import fr.opensagres.xdocreport.template.IContext;
+import fr.opensagres.xdocreport.template.TemplateEngineKind;
 import org.apache.poi.util.Units;
-import org.apache.poi.xwpf.usermodel.*;
+import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.xmlbeans.XmlCursor;
+import org.banew.report.generation.projections.FilePhotoBuilder;
 import org.banew.report.generation.projections.ReportObjectModel;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSimpleField;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.*;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 public class ReportBuilder {
-    public static File generate(ReportObjectModel model) throws Exception {
 
-        Map<String, File> parsedPhotos = new HashMap<>();
+    public static File generate(ReportObjectModel model, String outputName) throws Exception {
 
-        model.getPhotos().getFiles().forEach((name, builder) -> {
-            parsedPhotos.put(name, builder.build());
-        });
+        try (InputStream stream = ReportBuilder.class.getResourceAsStream("/template.docx");
+            FileOutputStream out = new FileOutputStream(outputName)) {
+            byte[] data = Objects.requireNonNull(stream).readAllBytes();
+            data = loadCorrectField(data);
+            data = loadTemplateChanges(data, model);
+            data = loadImages(data, model);
+            out.write(data);
+        }
 
-        try (XWPFDocument doc = new XWPFDocument(
-                Objects.requireNonNull(ReportBuilder.class.getResourceAsStream("/template.docx")))) {
+        return new File(outputName);
+    }
 
-            fillTemplate(doc, model.getProperties());
+    private static byte[] loadImages(byte[] data, ReportObjectModel model) throws Exception {
+        XWPFDocument doc;
+        try (InputStream is = new ByteArrayInputStream(data)) {
+            doc = new XWPFDocument(is);
+        }
 
-            // 1. Створюємо парсер
-            Parser parser = Parser.builder().build();
-            Node document = parser.parse(model.getContent());
+        // Проходимо по всіх параграфах документа
+        // Важливо: ми використовуємо копію списку, щоб уникнути ConcurrentModificationException
+        List<XWPFParagraph> paragraphs = new ArrayList<>(doc.getParagraphs());
+        int imageIndex = 1;
 
-            // 2. Створюємо Visitor, який "малює" у Word
-            NodeVisitor visitor = new NodeVisitor(
-                    new VisitHandler<>(Heading.class, h -> {
-                        XWPFParagraph p = doc.createParagraph();
-                        XWPFRun run = p.createRun();
-                        run.setText(h.getText().toString());
-                        run.setBold(true);
-                        run.setFontSize(20 - (h.getLevel() * 2));
-                    }),
+        for (XWPFParagraph p : paragraphs) {
+            String text = p.getText();
 
-                    new VisitHandler<>(Paragraph.class, pg -> {
-                        String originalText = pg.getContentChars().toString().trim();
+            // 2. Обробка фоток (Шукаємо {{name}} з твоєї моделі)
+            for (Map.Entry<String, FilePhotoBuilder> entry : model.getPhotos().getFiles().entrySet()) {
+                String placeholder = "{{" + entry.getKey() + "}}";
 
-                        // 1. ПЕРЕВІРКА НА ФОТО
-                        // Використовуємо findFirst, щоб не плодити копії, якщо знайшли збіг
-                        Optional<String> photoKey = parsedPhotos.keySet().stream()
-                                .filter(name -> originalText.contains("{{" + name + "}}"))
-                                .findFirst();
+                if (text.contains(placeholder)) {
+                    FilePhotoBuilder builder = entry.getValue();
+                    File imageFile = builder.build();
 
-                        if (photoKey.isPresent()) {
-                            File file = parsedPhotos.get(photoKey.get());
-                            insertImage(doc, file.getAbsolutePath(), 400, 300);
-                            return; // Виходимо, щоб не дублювати цей параграф як текст
-                        }
-
-                        // 2. ПЕРЕВІРКА НА ЗАМІНУ ТЕКСТУ (Властивості моделі)
-                        String processedText = originalText;
-                        boolean hasProperty = false;
-
-                        for (var entry : model.getProperties().entrySet()) {
-                            String placeholder = "{{" + entry.getKey() + "}}";
-                            if (processedText.contains(placeholder)) {
-                                processedText = processedText.replace(placeholder, entry.getValue());
-                                hasProperty = true;
+                    if (imageFile != null && imageFile.exists()) {
+                        p.setAlignment(ParagraphAlignment.CENTER);
+                        // ЗАМІСТЬ ПОВНОГО ВИДАЛЕННЯ:
+                        // Проходимо по "рунах" (шматках тексту) і міняємо тільки плейсхолдер
+                        for (XWPFRun run : p.getRuns()) {
+                            String runText = run.getText(0);
+                            if (runText != null && runText.contains(placeholder)) {
+                                // Міняємо {{penis}} на порожнечу в цій конкретній руні
+                                run.setText(runText.replace(placeholder, ""), 0);
+                                // Вставляємо картинку в ЦЮ Ж руну (або нову поруч)
+                                try (FileInputStream is = new FileInputStream(imageFile)) {
+                                    run.addPicture(is, XWPFDocument.PICTURE_TYPE_PNG,
+                                            imageFile.getName(), Units.toEMU(350),
+                                            Units.toEMU(computeImageHeightByWidth(imageFile, 350)));
+                                    run.addBreak();
+                                    run.setText("Рис. " + imageIndex + " - " + builder.getLabel());
+                                    run.addBreak();
+                                }
                             }
                         }
-
-                        // 3. ВИВІД У WORD
-                        // Якщо це не фото, створюємо звичайний параграф (з заміною або без)
-                        XWPFParagraph p = doc.createParagraph();
-                        XWPFRun run = p.createRun();
-                        run.setText(processedText);
-                    })
-            );
-
-            // 3. Запускаємо обхід дерева
-            visitor.visit(document);
-
-            // 4. Зберігаємо файл
-            try (FileOutputStream out = new FileOutputStream("GeneratedReport.docx")) {
-                doc.write(out);
-            }
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        parsedPhotos.values().forEach(File::delete);
-
-        return new File("GeneratedReport.docx");
-    }
-
-    private static void insertImage(XWPFDocument doc, String imgPath, int width, int height) {
-        XWPFParagraph p = doc.createParagraph();
-        p.setAlignment(ParagraphAlignment.CENTER); // Центруємо картинку
-        XWPFRun run = p.createRun();
-
-        try (InputStream is = new FileInputStream(imgPath)) {
-            // Додаємо картинку
-            run.addPicture(
-                    is,
-                    XWPFDocument.PICTURE_TYPE_PNG, // Тип файлу
-                    imgPath,                       // Назва
-                    Units.toEMU(width),            // Ширина в одиницях EMU
-                    Units.toEMU(height)            // Висота в одиницях EMU
-            );
-
-            // Додаємо підпис під картинкою (опціонально)
-            XWPFParagraph caption = doc.createParagraph();
-            caption.setAlignment(ParagraphAlignment.CENTER);
-            XWPFRun captionRun = caption.createRun();
-            captionRun.setItalic(true);
-            captionRun.setText("Рис. — Згенерований фрагмент коду");
-
-        } catch (Exception e) {
-            System.err.println("Не вдалося вставити картинку: " + e.getMessage());
-        }
-    }
-
-    private static void fillTemplate(XWPFDocument doc, Map<String, String> properties) {
-        // 1. Обробляємо звичайні параграфи
-        for (XWPFParagraph p : doc.getParagraphs()) {
-            replaceInParagraph(p, properties);
-        }
-
-        // 2. Обробляємо таблиці (якщо в тебе там теж є мітки)
-        for (XWPFTable table : doc.getTables()) {
-            for (XWPFTableRow row : table.getRows()) {
-                for (XWPFTableCell cell : row.getTableCells()) {
-                    for (XWPFParagraph p : cell.getParagraphs()) {
-                        replaceInParagraph(p, properties);
+                        imageFile.delete();
                     }
                 }
             }
         }
+
+        // Жорстка уніфікація стилів для всього документа
+        for (XWPFParagraph p : doc.getParagraphs()) {
+
+            // 2. Налаштування абзацу (вирівнювання та інтервали)
+            p.setSpacingBetween(1.5); // Міжрядковий інтервал 1.5
+
+            for (XWPFRun run : p.getRuns()) {
+                // 3. Жорстко задаємо шрифт
+                run.setFontFamily("Times New Roman");
+                run.setColor("000000");
+            }
+        }
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        doc.write(out);
+        return out.toByteArray();
     }
 
-    private static void replaceInParagraph(XWPFParagraph p, Map<String, String> properties) {
-        List<XWPFRun> runs = p.getRuns();
-        if (runs == null || runs.isEmpty()) return;
+    private static int computeImageHeightByWidth(File file, int targetWidth) throws Exception {
+        try (FileInputStream is = new FileInputStream(file)) {
+            BufferedImage bimg = ImageIO.read(is);
+            int width = bimg.getWidth();
+            int height = bimg.getHeight();
 
-        // Склеюємо весь текст параграфа в один рядок
-        StringBuilder fullText = new StringBuilder();
-        for (XWPFRun r : runs) {
-            String text = r.getText(0);
-            if (text != null) fullText.append(text);
+            return  Integer.min((int) ( (double) height / (double) width * targetWidth ), 500);
+        }
+    }
+
+    private static byte[] loadTemplateChanges(byte[] data, ReportObjectModel model) throws IOException, XDocReportException {
+        try (InputStream templateStream = new ByteArrayInputStream(data)) {
+
+            IXDocReport report = XDocReportRegistry.getRegistry()
+                    .loadReport(templateStream, TemplateEngineKind.Velocity);
+
+            report.setCacheOriginalDocument(true);
+
+            var metadata = report.createFieldsMetadata();
+            metadata.addFieldAsTextStyling("content", SyntaxKind.Html);
+
+            IContext context = report.createContext();
+
+            context.put("content", model.getContent());
+            model.getProperties().forEach(context::put);
+
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            report.process(context, outputStream);
+            return outputStream.toByteArray();
+
+        }
+    }
+
+    private static byte[] loadCorrectField(byte[] data) throws IOException {
+        XWPFDocument doc;
+        try (InputStream is = new ByteArrayInputStream(data)) {
+            doc = new XWPFDocument(Objects.requireNonNull(is));
         }
 
-        String content = fullText.toString();
-        boolean updated = false;
+        // 2. Шукаємо наш текст і міняємо його на справжнє поле
+        for (XWPFParagraph p : doc.getParagraphs()) {
+            String text = p.getText();
+            if (text.contains("${content}")) {
+                // Очищаємо параграф
+                for (int i = p.getRuns().size() - 1; i >= 0; i--) p.removeRun(i);
 
-        // Проходимо по мапі і замінюємо
-        for (Map.Entry<String, String> entry : properties.entrySet()) {
-            String placeholder = "{{" + entry.getKey() + "}}";
-            if (content.contains(placeholder)) {
-                content = content.replace(placeholder, entry.getValue());
-                updated = true;
+                // Вставляємо MERGEFIELD через XML-курсор
+                XmlCursor cursor = p.getCTP().newCursor();
+                cursor.toEndToken();
+                CTSimpleField field = p.getCTP().addNewFldSimple();
+                field.setInstr(" MERGEFIELD content ");
+                field.addNewR().addNewT().setStringValue("«content»");
+                cursor.close();
             }
         }
 
-        // Якщо щось замінили — перезаписуємо рани
-        if (updated) {
-            // Видаляємо всі старі рани, крім першого
-            for (int i = runs.size() - 1; i > 0; i--) {
-                p.removeRun(i);
-            }
-            // В перший ран записуємо оновлений текст, зберігаючи форматування
-            XWPFRun run = runs.get(0);
-            run.setText(content, 0);
-        }
+        // 3. Тепер передаємо цей "підправлений" документ у XDocReport
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        doc.write(out);
+
+        return out.toByteArray();
     }
 }

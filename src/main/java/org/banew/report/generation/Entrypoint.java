@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.vladsch.flexmark.ext.yaml.front.matter.YamlFrontMatterBlock;
 import com.vladsch.flexmark.ext.yaml.front.matter.YamlFrontMatterExtension;
+import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.ast.Node;
 import com.vladsch.flexmark.util.data.MutableDataSet;
@@ -23,11 +24,12 @@ public class Entrypoint {
             URI romSource = Entrypoint.class.getResource("/testRom.md").toURI(); // args[0];
 
             var rom = buildRom(romSource);
-            ReportBuilder.generate(rom);
+            ReportBuilder.generate(rom, "generatedReport.docx");
             System.out.println("rom: " + rom);
         }
         catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
+            throw e;
+            //System.out.println("Error: " + e.getMessage());
         }
     }
 
@@ -38,6 +40,7 @@ public class Entrypoint {
             MutableDataSet options = new MutableDataSet();
             options.set(Parser.EXTENSIONS, Collections.singletonList(YamlFrontMatterExtension.create()));
             Parser parser = Parser.builder(options).build();
+            HtmlRenderer renderer = HtmlRenderer.builder(options).build();
 
             Node document = parser.parse(content);
             Node metadataBlock = document.getFirstChild();
@@ -48,7 +51,11 @@ public class Entrypoint {
                 ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
 
                 var obj = mapper.readValue(yamlText, ReportObjectModel.class);
-                obj.setContent(content.substring(metadataBlock.getEndOffset()));
+
+                String htmlContent = renderer.render(
+                        parser.parse(content.substring(metadataBlock.getEndOffset()).trim()));
+
+                obj.setContent(htmlContent);
                 obj.getProperties().put("year", LocalDateTime.now().getYear() + "");
 
                 return obj;

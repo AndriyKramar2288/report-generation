@@ -1,28 +1,25 @@
 ---
 properties:
-    course.name: qwewq
-    lab.name: улкцлцукцу
-    lab.purpose: АААААААА
-    lab.conclusion: ФФФФФФФФФФ
-    lab.number: 4
-    student.name: Крамар А.О.
-    student.group: ФЕІ-36с
-    teacher.name: Awqweqweweq
-    departament.name: Кафедра оптоелектроніки та інформаційних технологій
-code.paths:  
+    course_name: курс довбойобів
+    lab_name: лапочка
+    lab_purpose: нема мети
+    lab_conclusion: ЕЕЕЕЕ
+    lab_number: 4
+    student_name: Крамар А.О.
+    student_group: ФЕІ-36с
+    teacher_name: доц. Пеніс
+    departament_name: Кафедра оптоелектроніки та інформаційних технологій
+code_paths:  
 - "*/**/**.java"
 photos:
     files:
         penis:
-            name: PhotoBuilder.java
-            label: Photo BUIIIILDER
+            name: Entrypoint.java
+            label: Будувач фотографій
 ---
-#### Робота про шоськокуцкцкуцк  
-цукцууц  
-кцук  
-цукуццук  
-{{student.name}}
-{{penis}}  
-weqrewrew  
-werew  
-{{asbss}}
+{{penis}}
+
+йцуцйцуй
+йуйц
+у
+йцйцуйуйцйцууйц

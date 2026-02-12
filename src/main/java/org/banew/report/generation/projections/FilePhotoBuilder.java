@@ -50,17 +50,6 @@ public class FilePhotoBuilder extends PhotoBuilder {
 
     @Override
     public File build() {
-
-        Path targetDir = Paths.get(System.getProperty("user.dir"), "targetZZZ");
-
-        try {
-            Files.createDirectories(targetDir);
-        } catch (IOException e) {
-            throw new RuntimeException("Не вдалося створити папку для звітів", e);
-        }
-
-        File photo = targetDir.resolve(UUID.randomUUID().toString() + ".png").toFile();
-
         File sourceFile = findFileContent(name);
         try {
             if (sourceFile != null) {
