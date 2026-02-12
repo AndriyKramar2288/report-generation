@@ -12,7 +12,6 @@ public class ImageGenerator {
 
     public static File generateCodeImage(String inputPath) throws IOException, InterruptedException {
 
-
         ProcessBuilder pb = new ProcessBuilder(
                 "cmd.exe", "/c", "npx", "carbon-now",
                 inputPath,

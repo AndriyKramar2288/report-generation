@@ -1,6 +1,8 @@
-package org.banew.report.generation.projections;
+package org.banew.report.generation.projections.builders;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import org.banew.report.generation.ImageGenerator;
 
 import java.io.File;
 import java.io.IOException;
@@ -8,18 +10,40 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
-public abstract class PhotoBuilder {
+public abstract class TextContainingPhotoBuilder extends PhotoBuilder {
 
-    protected String slice;
-    protected String label;
+    private String slice;
 
-    public abstract File build(Path contextPath) throws IOException;
+    @Override
+    public final File build(Path contextPath) throws IOException {
 
-    protected File generateSlicedFile(File textFile) throws IOException {
+        File textFile = buildTextFile(contextPath);
+
+        textFile = slice == null ? textFile : generateSlicedFile(textFile);
+
+        try {
+            File generatedPhoto = ImageGenerator.generateCodeImage(textFile.getAbsolutePath());
+
+            if (slice != null) {
+                textFile.delete();
+            }
+
+            return generatedPhoto;
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    protected abstract File buildTextFile(Path contextPath) throws IOException;
+
+    private File generateSlicedFile(File textFile) throws IOException {
+
         String content = Files.readString(textFile.toPath());
 
-        File newTempFile = new File( "Рядки [" + slice + "] - " + textFile.getName());
+        File newTempFile = new File("Рядки [" + slice + "] - " + textFile.getName());
         Files.writeString(newTempFile.toPath(), sliceLines(content, slice));
 
         return newTempFile;

@@ -17,7 +17,7 @@ import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.apache.xmlbeans.XmlCursor;
-import org.banew.report.generation.projections.PhotoBuilder;
+import org.banew.report.generation.projections.builders.PhotoBuilder;
 import org.banew.report.generation.projections.ReportObjectModel;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSimpleField;
 
@@ -40,10 +40,10 @@ public class ReportBuilder {
 
         ReportBuilder.contextPath = contextPath;
 
-        Map<String, PhotoBuilder> photos = new HashMap<>();
+        Map<String, PhotoBuilder> photos = new LinkedHashMap<>();
         photos.putAll(model.getPhotos().getBash());
-        photos.putAll(model.getPhotos().getFiles());
-
+        photos.putAll(model.getPhotos().getText());
+        photos.putAll(model.getPhotos().getImages());
 
         try (InputStream stream = new FileInputStream(template)) {
             byte[] data = Objects.requireNonNull(stream).readAllBytes();
@@ -91,41 +91,44 @@ public class ReportBuilder {
         // Проходимо по всіх параграфах документа
         // Важливо: ми використовуємо копію списку, щоб уникнути ConcurrentModificationException
         List<XWPFParagraph> paragraphs = new ArrayList<>(doc.getParagraphs());
-        int imageIndex = 1;
+        int imageIndex = 0;
 
-        for (XWPFParagraph p : paragraphs) {
-            String text = p.getText();
+        // 2. Обробка фоток (Шукаємо {{name}} з твоєї моделі)
+        for (Map.Entry<String, ? extends PhotoBuilder> entry : images.entrySet()) {
+            String placeholder = "{{" + entry.getKey() + "}}";
 
-            // 2. Обробка фоток (Шукаємо {{name}} з твоєї моделі)
-            for (Map.Entry<String, ? extends PhotoBuilder> entry : images.entrySet()) {
-                String placeholder = "{{" + entry.getKey() + "}}";
+            try (PhotoBuilder builder = entry.getValue()) {
+                File imageFile = builder.build(contextPath);
 
-                if (text.contains(placeholder)) {
-                    PhotoBuilder builder = entry.getValue();
-                    File imageFile = builder.build(contextPath);
+                if (imageFile != null && imageFile.exists()) {
 
-                    if (imageFile != null && imageFile.exists()) {
-                        p.setAlignment(ParagraphAlignment.CENTER);
-                        // ЗАМІСТЬ ПОВНОГО ВИДАЛЕННЯ:
-                        // Проходимо по "рунах" (шматках тексту) і міняємо тільки плейсхолдер
-                        for (XWPFRun run : p.getRuns()) {
-                            String runText = run.getText(0);
-                            if (runText != null && runText.contains(placeholder)) {
-                                // Міняємо {{penis}} на порожнечу в цій конкретній руні
-                                run.setText(runText.replace(placeholder, ""), 0);
-                                // Вставляємо картинку в ЦЮ Ж руну (або нову поруч)
-                                try (FileInputStream is = new FileInputStream(imageFile)) {
-                                    run.addPicture(is, XWPFDocument.PICTURE_TYPE_PNG,
-                                            imageFile.getName(), Units.toEMU(350),
-                                            Units.toEMU(computeImageHeightByWidth(imageFile, 350)));
-                                    run.addBreak();
-                                    run.setText("Рис. " + imageIndex + " - " + builder.getLabel());
-                                    run.addBreak();
+                    for (XWPFParagraph p : paragraphs) {
+                        String text = p.getText();
+
+                        if (text.contains(placeholder)) {
+                            p.setAlignment(ParagraphAlignment.CENTER);
+                            // ЗАМІСТЬ ПОВНОГО ВИДАЛЕННЯ:
+                            // Проходимо по "рунах" (шматках тексту) і міняємо тільки плейсхолдер
+                            for (XWPFRun run : p.getRuns()) {
+                                String runText = run.getText(0);
+                                if (runText != null && runText.contains(placeholder)) {
+                                    // Міняємо {{penis}} на порожнечу в цій конкретній руні
+                                    run.setText(runText.replace(placeholder, ""), 0);
+                                    // Вставляємо картинку в ЦЮ Ж руну (або нову поруч)
+                                    try (FileInputStream is = new FileInputStream(imageFile)) {
+                                        run.addPicture(is, XWPFDocument.PICTURE_TYPE_PNG,
+                                                imageFile.getName(), Units.toEMU(350),
+                                                Units.toEMU(computeImageHeightByWidth(imageFile, 350)));
+                                        run.addBreak();
+                                        run.setText("Рис. " + ++imageIndex + " - " + builder.getLabel());
+                                        run.addBreak();
+                                    }
                                 }
                             }
                         }
-                        imageFile.delete();
                     }
+
+                    imageFile.delete();
                 }
             }
         }
@@ -161,7 +164,7 @@ public class ReportBuilder {
             int width = bimg.getWidth();
             int height = bimg.getHeight();
 
-            return  Integer.min((int) ( (double) height / (double) width * targetWidth ), 500);
+            return Integer.min((int) ((double) height / (double) width * targetWidth), 500);
         }
     }
 

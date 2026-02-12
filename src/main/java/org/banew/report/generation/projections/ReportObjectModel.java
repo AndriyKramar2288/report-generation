@@ -13,6 +13,10 @@ import com.vladsch.flexmark.util.data.MutableDataSet;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.banew.report.generation.projections.builders.BashPhotoBuilder;
+import org.banew.report.generation.projections.builders.DirectPhotoBuilder;
+import org.banew.report.generation.projections.builders.FilePhotoBuilder;
+import org.banew.report.generation.projections.builders.PhotoBuilder;
 
 import java.io.IOException;
 import java.net.URI;
@@ -35,8 +39,9 @@ public class ReportObjectModel {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class Photos {
-        private Map<String, FilePhotoBuilder> files = new HashMap<>();
+        private Map<String, FilePhotoBuilder> text = new HashMap<>();
         private Map<String, BashPhotoBuilder> bash = new HashMap<>();
+        private Map<String, DirectPhotoBuilder> images = new HashMap<>();
     }
 
     protected ReportObjectModel() {}

@@ -1,4 +1,4 @@
-package org.banew.report.generation.projections;
+package org.banew.report.generation.projections.builders;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -17,7 +17,7 @@ import java.util.stream.Stream;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class FilePhotoBuilder extends PhotoBuilder {
+public class FilePhotoBuilder extends TextContainingPhotoBuilder {
 
     private String name;
 
@@ -43,22 +43,7 @@ public class FilePhotoBuilder extends PhotoBuilder {
     }
 
     @Override
-    public File build(Path contextPath) throws IOException {
-        File sourceFile = findFileContent(name, contextPath);
-        try {
-            if (sourceFile != null) {
-                sourceFile = slice == null ? sourceFile : generateSlicedFile(sourceFile);
-                File generatedPhoto = ImageGenerator.generateCodeImage(sourceFile.getAbsolutePath());
-                if (slice != null) {
-                    sourceFile.delete();
-                }
-                return generatedPhoto;
-            }
-        }
-        catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        return null;
+    protected File buildTextFile(Path contextPath) throws IOException {
+        return findFileContent(name, contextPath);
     }
 }
