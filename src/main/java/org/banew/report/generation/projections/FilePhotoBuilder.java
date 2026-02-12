@@ -2,6 +2,7 @@ package org.banew.report.generation.projections;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.banew.report.generation.ImageGenerator;
 
@@ -12,10 +13,11 @@ import java.nio.file.Path;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class FilePhotoBuilder implements PhotoBuilder {
+public class FilePhotoBuilder extends PhotoBuilder {
 
     private String name;
     private String label;
@@ -42,11 +44,16 @@ public class FilePhotoBuilder implements PhotoBuilder {
     }
 
     @Override
-    public File build(Path contextPath) {
+    public File build(Path contextPath) throws IOException {
         File sourceFile = findFileContent(name, contextPath);
         try {
             if (sourceFile != null) {
-                return ImageGenerator.generateCodeImage(sourceFile.getAbsolutePath());
+                sourceFile = slice == null ? sourceFile : generateSlicedFile(sourceFile);
+                File generatedPhoto = ImageGenerator.generateCodeImage(sourceFile.getAbsolutePath());
+                if (slice != null) {
+                    sourceFile.delete();
+                }
+                return generatedPhoto;
             }
         }
         catch (Exception e) {

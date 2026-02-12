@@ -11,6 +11,8 @@ public class ImageGenerator {
     private static final File npmDir = new File(System.getProperty("user.dir") + "/npm");
 
     public static File generateCodeImage(String inputPath) throws IOException, InterruptedException {
+
+
         ProcessBuilder pb = new ProcessBuilder(
                 "cmd.exe", "/c", "npx", "carbon-now",
                 inputPath,

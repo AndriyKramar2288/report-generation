@@ -20,6 +20,7 @@ photos:
         imagegen:
              name: ImageGenerator.java
              label: Таке вот воно
+             slice: 13..32
     maven:
         asbss:
             phase: clean test
