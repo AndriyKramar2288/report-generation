@@ -1,6 +1,11 @@
 package org.banew.report.generation;
 
+import fr.opensagres.xdocreport.converter.ConverterRegistry;
+import fr.opensagres.xdocreport.converter.ConverterTypeTo;
+import fr.opensagres.xdocreport.converter.IConverter;
+import fr.opensagres.xdocreport.converter.Options;
 import fr.opensagres.xdocreport.core.XDocReportException;
+import fr.opensagres.xdocreport.core.document.DocumentKind;
 import fr.opensagres.xdocreport.core.document.SyntaxKind;
 import fr.opensagres.xdocreport.document.IXDocReport;
 import fr.opensagres.xdocreport.document.registry.XDocReportRegistry;
@@ -19,6 +24,7 @@ import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSimpleField;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -26,18 +32,52 @@ import java.util.Objects;
 
 public class ReportBuilder {
 
-    public static File generate(ReportObjectModel model, String outputName) throws Exception {
+    private static Path contextPath;
 
-        try (InputStream stream = ReportBuilder.class.getResourceAsStream("/template.docx");
-            FileOutputStream out = new FileOutputStream(outputName)) {
+    public static void generate(ReportObjectModel model,
+                                File template,
+                                String outputName,
+                                Path contextPath,
+                                boolean isDocxGenerate,
+                                boolean isPdfGenerate) throws Exception {
+
+        ReportBuilder.contextPath = contextPath;
+
+        try (InputStream stream = new FileInputStream(template)) {
             byte[] data = Objects.requireNonNull(stream).readAllBytes();
             data = loadCorrectField(data);
             data = loadTemplateChanges(data, model);
             data = loadImages(data, model);
-            out.write(data);
-        }
 
-        return new File(outputName);
+            if (isDocxGenerate) {
+                FileOutputStream out = new FileOutputStream(outputName + ".docx");
+                out.write(data);
+                out.close();
+            }
+
+            if (isPdfGenerate) {
+                FileOutputStream out = new FileOutputStream(outputName + ".pdf");
+                out.write(convertDocxToPdf(data));
+                out.close();
+            }
+        }
+    }
+
+    private static byte[] convertDocxToPdf(byte[] data) throws Exception {
+        try (InputStream in = new ByteArrayInputStream(data);
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+
+            // Налаштовуємо конвертер з DOCX у PDF
+            Options options = Options.getFrom(DocumentKind.DOCX).to(ConverterTypeTo.PDF);
+
+            // Шукаємо вбудований конвертер
+            IConverter converter = ConverterRegistry.getRegistry().getConverter(options);
+
+            // Робимо магію
+            converter.convert(in, out, options);
+
+            return out.toByteArray();
+        }
     }
 
     private static byte[] loadImages(byte[] data, ReportObjectModel model) throws Exception {
@@ -60,7 +100,7 @@ public class ReportBuilder {
 
                 if (text.contains(placeholder)) {
                     FilePhotoBuilder builder = entry.getValue();
-                    File imageFile = builder.build();
+                    File imageFile = builder.build(contextPath);
 
                     if (imageFile != null && imageFile.exists()) {
                         p.setAlignment(ParagraphAlignment.CENTER);
@@ -90,6 +130,13 @@ public class ReportBuilder {
 
         // Жорстка уніфікація стилів для всього документа
         for (XWPFParagraph p : doc.getParagraphs()) {
+
+            // ФІКС ДЛЯ ВІДСТУПІВ: якщо параграф порожній, додаємо невидимий символ
+            if (p.getRuns().isEmpty() || p.getText().trim().isEmpty()) {
+                XWPFRun r = p.createRun();
+                r.setText(" "); // Обов'язково хоча б один пробіл
+                r.setFontSize(14); // Задаємо висоту цього "порожнього" рядка
+            }
 
             // 2. Налаштування абзацу (вирівнювання та інтервали)
             p.setSpacingBetween(1.5); // Міжрядковий інтервал 1.5
