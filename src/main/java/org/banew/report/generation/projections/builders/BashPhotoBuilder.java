@@ -1,5 +1,7 @@
 package org.banew.report.generation.projections.builders;
 
+import com.sun.jna.platform.win32.User32;
+import com.sun.jna.ptr.IntByReference;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.banew.report.generation.ImageGenerator;
@@ -16,6 +18,8 @@ import java.util.List;
 public class BashPhotoBuilder extends TextContainingPhotoBuilder {
 
     private List<BashRun> runs = new ArrayList<>();
+    private boolean hide = true;
+
     private File tempFile;
 
     private String runAllInOneSession(Path context, List<BashRun> runs) throws IOException {
@@ -26,21 +30,14 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
         Process shell = pb.start();
         StringBuilder finalLog = new StringBuilder();
 
-        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(shell.getOutputStream(), StandardCharsets.UTF_8));
-        BufferedReader reader = new BufferedReader(new InputStreamReader(shell.getInputStream(), StandardCharsets.UTF_8));
+        Thread terminator = null; // для вбивства невинних віконець, що посміли вилізти
+        if (hide) {
+            terminator = new Terminator(shell);
+            terminator.start();
+        }
 
-//        // 2. ВАЖЛИВО: Кажемо консолі працювати в UTF-8 (65001)
-//        writer.write("chcp 65001\n");
-//        writer.flush();
-//
-//        // Пропускаємо вивід команди chcp (щоб він не потрапив у фінальний лог)
-//        String line;
-//        while ((line = reader.readLine()) != null) {
-//            if (line.contains("65001")) {
-//                reader.readLine();
-//                break;
-//            }
-//        }
+        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(shell.getOutputStream()));
+        BufferedReader reader = new BufferedReader(new InputStreamReader(shell.getInputStream()));
 
         String endMarker = "COMMAND_FINISHED_MARKER";
         String line;
@@ -74,6 +71,9 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
             throw new RuntimeException(e);
         }
 
+        if (terminator != null) {
+            terminator.interrupt();
+        }
         return finalLog.toString();
     }
 
@@ -83,7 +83,7 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
         var resultString = runAllInOneSession(contextPath, runs);
 
         tempFile = Files.createTempFile("run", ".shell").toFile();
-        Files.writeString(tempFile.toPath(), resultString, StandardCharsets.UTF_8);
+        Files.writeString(tempFile.toPath(), resultString);
 
         return tempFile;
     }
@@ -91,6 +91,40 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
     @Override
     public void close() throws Exception {
         tempFile.delete();
+    }
+
+    private static class Terminator extends Thread {
+        private final Process shell;
+
+        public Terminator(Process shell) {
+            this.shell = shell;
+            setDaemon(true);
+        }
+
+        private static void terminateOnlyMyWindows(long targetPid) {
+            User32.INSTANCE.EnumWindows((hwnd, pointer) -> {
+                IntByReference windowPid = new IntByReference();
+
+                // Дізнаємось, який PID створив це вікно
+                User32.INSTANCE.GetWindowThreadProcessId(hwnd, windowPid);
+
+                if (windowPid.getValue() == (int) targetPid) {
+                    // Це наше вікно! Закриваємо його
+                    User32.INSTANCE.PostMessage(hwnd, 0x0010, null, null); // 0x0010 == WM_CLOSE
+                }
+                return true;
+            }, null);
+        }
+
+        @Override
+        public void run() {
+            try {
+                while (!Thread.currentThread().isInterrupted() && shell.isAlive()) {
+                    shell.descendants().forEach(p -> terminateOnlyMyWindows(p.pid()));
+                    Thread.sleep(300);
+                }
+            } catch (InterruptedException ignored) {}
+        }
     }
 
     @Data
