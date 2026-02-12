@@ -12,6 +12,7 @@ import java.util.Arrays;
 public abstract class PhotoBuilder {
 
     protected String slice;
+    protected String label;
 
     public abstract File build(Path contextPath) throws IOException;
 

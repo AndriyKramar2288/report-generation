@@ -36,6 +36,7 @@ public class ReportObjectModel {
     @NoArgsConstructor
     public static class Photos {
         private Map<String, FilePhotoBuilder> files = new HashMap<>();
+        private Map<String, BashPhotoBuilder> bash = new HashMap<>();
     }
 
     protected ReportObjectModel() {}

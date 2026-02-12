@@ -20,7 +20,6 @@ import java.util.stream.Stream;
 public class FilePhotoBuilder extends PhotoBuilder {
 
     private String name;
-    private String label;
 
     private static File findFileContent(String fileName, Path root) {
         try (Stream<Path> stream = Files.walk(root)) {

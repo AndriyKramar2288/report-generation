@@ -16,6 +16,11 @@ photos:
         penis:
             name: Entrypoint.java
             label: Будувач фотографій
+    bash:
+        alahuakba:
+            label: ZZZZ
+            runs:
+              - command: dir
 ---
 {{penis}}
 
@@ -23,3 +28,5 @@ photos:
 йуйц
 у
 йцйцуйуйцйцууйц
+
+{{alahuakba}}

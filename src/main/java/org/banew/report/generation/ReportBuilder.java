@@ -17,7 +17,7 @@ import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.apache.xmlbeans.XmlCursor;
-import org.banew.report.generation.projections.FilePhotoBuilder;
+import org.banew.report.generation.projections.PhotoBuilder;
 import org.banew.report.generation.projections.ReportObjectModel;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTSimpleField;
 
@@ -25,10 +25,7 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public class ReportBuilder {
 
@@ -43,11 +40,16 @@ public class ReportBuilder {
 
         ReportBuilder.contextPath = contextPath;
 
+        Map<String, PhotoBuilder> photos = new HashMap<>();
+        photos.putAll(model.getPhotos().getBash());
+        photos.putAll(model.getPhotos().getFiles());
+
+
         try (InputStream stream = new FileInputStream(template)) {
             byte[] data = Objects.requireNonNull(stream).readAllBytes();
             data = loadCorrectField(data);
             data = loadTemplateChanges(data, model);
-            data = loadImages(data, model);
+            data = loadImages(data, photos);
 
             if (isDocxGenerate) {
                 FileOutputStream out = new FileOutputStream(outputName + ".docx");
@@ -80,7 +82,7 @@ public class ReportBuilder {
         }
     }
 
-    private static byte[] loadImages(byte[] data, ReportObjectModel model) throws Exception {
+    private static byte[] loadImages(byte[] data, Map<String, PhotoBuilder> images) throws Exception {
         XWPFDocument doc;
         try (InputStream is = new ByteArrayInputStream(data)) {
             doc = new XWPFDocument(is);
@@ -95,11 +97,11 @@ public class ReportBuilder {
             String text = p.getText();
 
             // 2. Обробка фоток (Шукаємо {{name}} з твоєї моделі)
-            for (Map.Entry<String, FilePhotoBuilder> entry : model.getPhotos().getFiles().entrySet()) {
+            for (Map.Entry<String, ? extends PhotoBuilder> entry : images.entrySet()) {
                 String placeholder = "{{" + entry.getKey() + "}}";
 
                 if (text.contains(placeholder)) {
-                    FilePhotoBuilder builder = entry.getValue();
+                    PhotoBuilder builder = entry.getValue();
                     File imageFile = builder.build(contextPath);
 
                     if (imageFile != null && imageFile.exists()) {
