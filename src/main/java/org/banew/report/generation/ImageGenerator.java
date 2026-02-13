@@ -23,8 +23,8 @@ public class ImageGenerator {
                 "--headless"
         );
 
-        log.debug("Наслєдуєм IO, шоб бачити в консолі, як ця сука мучиться");
-        pb.inheritIO();
+//        log.debug("Наслєдуєм IO, шоб бачити в консолі, як ця сука мучиться");
+//        pb.inheritIO();
         pb.directory(npmDir);
 
         log.debug("Стартуєм процес. Тікай з городу, щас Carbon почне жерати оперативу!");

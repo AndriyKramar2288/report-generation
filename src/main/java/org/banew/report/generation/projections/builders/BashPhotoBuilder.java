@@ -28,6 +28,8 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
     private String runAllInOneSession(Path context, List<BashRun> runs) throws IOException {
         log.debug("Сука, заводим цю колимагу cmd.exe, шоб вона всралась");
         ProcessBuilder pb = new ProcessBuilder("cmd.exe");
+        pb.environment().put("PYTHONIOENCODING", "utf-8");
+        pb.environment().put("LANG", "en_US.UTF-8");
         pb.directory(context.toFile());
         pb.redirectErrorStream(true);
 
@@ -41,27 +43,13 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
             terminator.start();
         }
 
-        log.debug("Настраюєм потоки, блядь, шоб юнікод не здох як сука");
         BufferedWriter writer = new BufferedWriter(
-                new OutputStreamWriter(shell.getOutputStream(), StandardCharsets.UTF_8));
+                new OutputStreamWriter(shell.getOutputStream()));
         BufferedReader reader = new BufferedReader(
-                new InputStreamReader(shell.getInputStream(), StandardCharsets.UTF_8));
-
-        log.debug("Шиєм цій паскуді chcp 65001, хай понімає мову, падла");
-        writer.write("chcp 65001\n");
-        writer.flush();
+                new InputStreamReader(shell.getInputStream()));
 
         String uniqueMarker = "COMMAND_FINISHED_MARKER";
         String line;
-
-        log.debug("Ждем, пока ця хуйня прочехлиця після зміни кодіровки");
-        while ((line = reader.readLine()) != null) {
-            if (line.contains("65001")) {
-                log.debug("О, роздуплилась, ковтаєм остальний мусор");
-                reader.readLine();
-                break;
-            }
-        }
 
         for (BashRun run : runs) {
             log.debug("Стартуєм новий запуск: '{}', вхідна хуйня: '{}'", run.getCommand(), run.getInput());
@@ -74,7 +62,7 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
                     char letter = (char) reader.read();
                     finalLog.append(letter);
                     try {
-                        Thread.sleep(10);
+                        Thread.sleep(25);
                     } catch (InterruptedException e) {
                         log.debug("Якийсь підарас перебив нам сон, сука");
                         throw new RuntimeException(e);
@@ -98,7 +86,7 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
                         finalLog.append((char) reader.read());
                     }
                     try {
-                        Thread.sleep(10);
+                        Thread.sleep(25);
                     } catch (InterruptedException e) {
                         log.debug("ХТО СУКААА");
                         throw new RuntimeException(e);
@@ -161,7 +149,7 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
 
         log.debug("Ліпим врємєнний файл, шоб запхати туди цей брєд");
         tempFile = Files.createTempFile("run", ".shell").toFile();
-        Files.writeString(tempFile.toPath(), resultString, StandardCharsets.UTF_8);
+        Files.writeString(tempFile.toPath(), resultString);
 
         return tempFile;
     }

@@ -48,6 +48,8 @@ public class Entrypoint implements Runnable {
         }
 
         this.inputReportMd = inputReportMd;
+        // 1. Вельми культурний лог про успішну валідацію
+        log.info("Вихідний матеріал формату Markdown успішно пройшов верифікацію структури.");
     }
 
     private File inputReportMd;
@@ -65,6 +67,8 @@ public class Entrypoint implements Runnable {
     @Override
     public void run() {
         log.debug("Запускаєм цю шарманку, блядь, в потоці main");
+        // 2. Початок роботи
+        log.info("Розпочато процес обробки звіту. Ласкаво просимо.");
         try {
             if (inputReportMd == null) {
                 log.debug("Юзер провтикав вказати MD, будем шукати rom.md у помойці за шляхом: {}", contextPath);
@@ -73,6 +77,8 @@ public class Entrypoint implements Runnable {
 
             if (templateFile == null) {
                 log.debug("Темплейта нема, берем вбудований з ресурсів. Надійся, шо він там лежить, сука");
+                // 3. Лог про ресурси
+                log.info("Зовнішній шаблон не знайдено. Використовуємо вбудований еталонний зразок.");
             }
 
             try (InputStream template = templateFile == null ?
@@ -83,33 +89,68 @@ public class Entrypoint implements Runnable {
                 URI romSource = inputReportMd.toURI();
 
                 log.debug("Визиваєм магію створення ROM об'єкта");
+                // 4. Початок парсингу моделі
+                log.info("Здійснюється десериалізація контенту та побудова об'єктної моделі звіту.");
                 var rom = ReportObjectModel.create(romSource, contextPath);
 
                 log.debug("Єбать, воно вижило! Ось який ROM ми зліпили: {}", rom);
+                // 5. Успіх побудови моделі
+                log.info("Об'єктна модель успішно сформована. Кількість знайдених компонентів: {}",
+                        (rom.getPhotos().getBash().size() + rom.getCodeFileNameToContentMap().size()));
 
                 log.debug("Запускаєм головний завод по генерації гівна. DOCX: {}, PDF: {}", isDocxGenerate, isPdfGenerate);
+                // 6. Фінальний крок
+                log.info("Переходимо до стадії фінальної візуалізації та формування вихідних документів.");
+
                 ReportBuilder.generate(Objects.requireNonNull(rom),
                         Objects.requireNonNull(template),
                         outputPath.getAbsolutePath(),
                         contextPath,
                         isDocxGenerate,
                         isPdfGenerate);
+
+                // 7. Тріумфальне завершення
+                log.info("Формування звіту завершено успішно. Результати збережено у: {}", outputPath.getParent());
             }
         } catch (Exception e) {
             log.error("Всьо, пізда, приїхали! Помилка: {}", e.getMessage());
+            // 8. Культурний опис катастрофи
+            log.info("На превеликий жаль, у процесі виконання виникла непередбачувана ситуація. Просимо вибачення за незручності.");
             e.printStackTrace();
             log.error("Якась сперма вилізла в Entrypoint, розбирайся нахуй!");
         }
     }
 
     public static void main(String[] args) throws Exception {
+
+        try (InputStream is = Entrypoint.class.getResourceAsStream("/logo.shell")) {
+            if (is == null) {
+                log.warn("Логотип не знайдено, але ми продовжуємо з гідністю.");
+            } else {
+                String logo = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                System.out.println(logo);
+            }
+        }
+
         log.debug("Вказуємо, шо ми тіко на UTF-8 готові думать");
+        // 9. Налаштування середовища
+        log.info("Налаштування потоків виводу згідно з міжнародними стандартами UTF-8.");
         System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
         System.setErr(new PrintStream(System.err, true, StandardCharsets.UTF_8));
 
         log.debug("Точка входу, блядь. Щас Picocli розкидає аргументи як шлюх");
+        // 10. Початок розбору аргументів
+        log.info("Аналіз параметрів командного рядка...");
+
         int exitCode = new CommandLine(new Entrypoint()).execute(args);
+
+        // 11. Результат виконання
+        log.info("Роботу застосунку завершено з кодом стану: {}", exitCode);
+
         log.debug("Програма закончілась з кодом {}. Валим нахуй!", exitCode);
+
+        // 12. Останнє прощання
+        log.info("Дякуємо, що скористалися нашими послугами. Гарного дня!");
         System.exit(exitCode);
     }
 }

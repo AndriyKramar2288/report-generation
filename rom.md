@@ -17,10 +17,10 @@ photos:
             label: LIST
             runs:
               - command: echo 1111
-              - command: echo 2222
-              - command: echo 3333
-              - command: python playground/lab3.py
-                input: "Yes"
+              - command: echo Привіт
+              - command: echo こんばんは
+#              - command: python playground/lab3.py
+#                input: "Yes"
 ---
 йцуцйцуй
 йуйц

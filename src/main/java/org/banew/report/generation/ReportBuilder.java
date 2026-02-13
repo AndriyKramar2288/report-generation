@@ -147,7 +147,7 @@ public class ReportBuilder {
                                                 imageFile.getName(), Units.toEMU(350),
                                                 Units.toEMU(computeImageHeightByWidth(imageFile, 350)));
                                         run.addBreak();
-                                        run.setText("Рис. " + ++imageIndex + " - " + builder.getLabel());
+                                        run.setText("Рис. " + ++imageIndex + " " + builder.getLabel());
                                         run.addBreak();
                                     }
                                 }
