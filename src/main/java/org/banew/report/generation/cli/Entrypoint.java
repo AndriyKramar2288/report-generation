@@ -6,12 +6,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
 
 @CommandLine.Command(
         description = "Побудувати фінальний DOCX на основі наданого MD-файлу"
@@ -48,11 +49,12 @@ public class Entrypoint implements Runnable {
 
         this.inputReportMd = inputReportMd;
     }
+
     private File inputReportMd;
 
     @CommandLine.Option(names = {"-t", "--template"},
             description = "Назва template-файлу DOCX")
-    private File templateFile;
+    private Path templateFile;
 
     @CommandLine.Option(names = {"-pdf"}, description = "Генерувати PDF")
     private boolean isPdfGenerate;
@@ -71,32 +73,40 @@ public class Entrypoint implements Runnable {
 
             if (templateFile == null) {
                 log.debug("Темплейта нема, берем вбудований з ресурсів. Надійся, шо він там лежить, сука");
-                templateFile = Paths.get(getClass().getResource("/template.docx").toURI()).toFile();
             }
 
-            log.debug("Перетворюєм шлях до MD у URI: {}", inputReportMd.toURI());
-            URI romSource = inputReportMd.toURI();
+            try (InputStream template = templateFile == null ?
+                    getClass().getResourceAsStream("/template.docx")
+                    : new FileInputStream(templateFile.toFile())) {
 
-            log.debug("Визиваєм магію створення ROM об'єкта");
-            var rom = ReportObjectModel.create(romSource);
+                log.debug("Перетворюєм шлях до MD у URI: {}", inputReportMd.toURI());
+                URI romSource = inputReportMd.toURI();
 
-            log.debug("Єбать, воно вижило! Ось який ROM ми зліпили: {}", rom);
+                log.debug("Визиваєм магію створення ROM об'єкта");
+                var rom = ReportObjectModel.create(romSource);
 
-            log.debug("Запускаєм головний завод по генерації гівна. DOCX: {}, PDF: {}", isDocxGenerate, isPdfGenerate);
-            ReportBuilder.generate(rom,
-                    templateFile,
-                    outputPath.getAbsolutePath(),
-                    contextPath,
-                    isDocxGenerate,
-                    isPdfGenerate);
-        }
-        catch (Exception e) {
+                log.debug("Єбать, воно вижило! Ось який ROM ми зліпили: {}", rom);
+
+                log.debug("Запускаєм головний завод по генерації гівна. DOCX: {}, PDF: {}", isDocxGenerate, isPdfGenerate);
+                ReportBuilder.generate(Objects.requireNonNull(rom),
+                        Objects.requireNonNull(template),
+                        outputPath.getAbsolutePath(),
+                        contextPath,
+                        isDocxGenerate,
+                        isPdfGenerate);
+            }
+        } catch (Exception e) {
             log.error("Всьо, пізда, приїхали! Помилка: {}", e.getMessage());
+            e.printStackTrace();
             log.error("Якась сперма вилізла в Entrypoint, розбирайся нахуй!");
         }
     }
 
     public static void main(String[] args) throws Exception {
+        log.debug("Вказуємо, шо ми тіко на UTF-8 готові думать");
+        System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
+        System.setErr(new PrintStream(System.err, true, StandardCharsets.UTF_8));
+
         log.debug("Точка входу, блядь. Щас Picocli розкидає аргументи як шлюх");
         int exitCode = new CommandLine(new Entrypoint()).execute(args);
         log.debug("Програма закончілась з кодом {}. Валим нахуй!", exitCode);

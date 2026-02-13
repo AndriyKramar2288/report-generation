@@ -10,7 +10,7 @@ import java.util.Objects;
 public class ImageGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(ImageGenerator.class);
-    private static final File npmDir = new File(System.getProperty("user.dir") + "/npm");
+    private static final File npmDir = new File(System.getProperty("user.dir"), "/npm");
 
     public static File generateCodeImage(String inputPath) throws IOException, InterruptedException {
         log.debug("Так, блядь, готуємся фоткати код. Вхідна залупа: {}", inputPath);

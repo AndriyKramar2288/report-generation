@@ -35,7 +35,7 @@ public class ReportBuilder {
     private static Path contextPath;
 
     public static void generate(ReportObjectModel model,
-                                File template,
+                                InputStream template,
                                 String outputName,
                                 Path contextPath,
                                 boolean isDocxGenerate,
@@ -50,33 +50,32 @@ public class ReportBuilder {
         photos.putAll(model.getPhotos().getText());
         photos.putAll(model.getPhotos().getImages());
 
-        try (InputStream stream = new FileInputStream(template)) {
-            log.debug("Засмоктуєм шаблон '{}', надійся, шо він не обриганий", template.getName());
-            byte[] data = Objects.requireNonNull(stream).readAllBytes();
+        log.debug("Засмоктуєм шаблон '{}', надійся, шо він не обриганий", template);
+        byte[] data = Objects.requireNonNull(template).readAllBytes();
 
-            log.debug("Фіксаєм поля, шоб Ворд не вийожувався");
-            data = loadCorrectField(data);
+        log.debug("Фіксаєм поля, шоб Ворд не вийожувався");
+        data = loadCorrectField(data);
 
-            log.debug("Пхаєм дані з моделі в шаблон через Velocity. Пливи, плотва!");
-            data = loadTemplateChanges(data, model);
+        log.debug("Пхаєм дані з моделі в шаблон через Velocity. Пливи, плотва!");
+        data = loadTemplateChanges(data, model);
 
-            log.debug("Час засирати документ картинками. Готуй дишіль!");
-            data = loadImages(data, photos);
+        log.debug("Час засирати документ картинками. Готуй дишіль!");
+        data = loadImages(data, photos);
 
-            if (isDocxGenerate) {
-                log.debug("Ліпим .docx файл: {}.docx. Хай юзери радуються", outputName);
-                try (FileOutputStream out = new FileOutputStream(outputName + ".docx")) {
-                    out.write(data);
-                }
-            }
-
-            if (isPdfGenerate) {
-                log.debug("Конвертим цю парашу в PDF, бо солідні люди ворд не читають");
-                try (FileOutputStream out = new FileOutputStream(outputName + ".pdf")) {
-                    out.write(convertDocxToPdf(data));
-                }
+        if (isDocxGenerate) {
+            log.debug("Ліпим .docx файл: {}.docx. Хай юзери радуються", outputName);
+            try (FileOutputStream out = new FileOutputStream(outputName + ".docx")) {
+                out.write(data);
             }
         }
+
+        if (isPdfGenerate) {
+            log.debug("Конвертим цю парашу в PDF, бо солідні люди ворд не читають");
+            try (FileOutputStream out = new FileOutputStream(outputName + ".pdf")) {
+                out.write(convertDocxToPdf(data));
+            }
+        }
+
         log.debug("Всьо, блядь, розходимся. Звіт готовий, я спать!");
     }
 

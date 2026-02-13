@@ -66,39 +66,47 @@ public abstract class TextContainingPhotoBuilder extends PhotoBuilder {
     }
 
     private String sliceLines(String content, String range) {
-        log.debug("Роздупляєм діапазон слайса: '{}'", range);
-        if (range == null || !range.contains("..")) {
-            log.debug("Якась хуйня вказана, а не діапазон. Вертаєм всьо як було");
-            return content;
-        }
+        if (range == null || !range.contains("..")) return content;
 
-        log.debug("Ділим контент по рядках, сука");
         String[] lines = content.split("\\r?\\n");
+        int total = lines.length; // Наше "end"
+
         String[] parts = range.split("\\.\\.", -1);
 
         int start = 0;
-        int end = lines.length;
+        int end = total;
 
         try {
             if (!parts[0].isEmpty()) {
-                start = Math.max(0, Integer.parseInt(parts[0].trim()) - 1);
-                log.debug("Стартуєм з рядка №{}", start + 1);
+                start = parseIndex(parts[0].trim(), total);
             }
             if (parts.length > 1 && !parts[1].isEmpty()) {
-                end = Math.min(lines.length, Integer.parseInt(parts[1].trim()));
-                log.debug("Кінчаєм на рядку №{}", end);
+                end = parseIndex(parts[1].trim(), total);
             }
-        } catch (NumberFormatException e) {
-            log.debug("Юзер — довбойоб, ввів букви замість цифр. Плюєм на слайс");
-            return content;
+        } catch (Exception e) {
+            return content; // Якщо юзер перемудрив з математикою
         }
+        
+        start = Math.max(0, Math.min(start, total));
+        end = Math.max(0, Math.min(end, total));
 
-        if (start >= end || start >= lines.length) {
-            log.debug("Діапазон — повна хуйня, старт за кінцем або за файлом. Вертаєм пустоту");
-            return "";
-        }
+        if (start >= end) return "";
 
-        log.debug("Склеюєм назад відібрані {} рядків", end - start);
         return String.join("\n", Arrays.copyOfRange(lines, start, end));
+    }
+
+    // Допоміжний метод для парсингу "end-5" або просто "10"
+    private int parseIndex(String input, int total) {
+        String raw = input.toLowerCase().replace(" ", "");
+
+        if (raw.contains("end")) {
+            // Обробляємо "end-5" або "end+2" (хоча +2 це дивно, але хай буде)
+            String offsetStr = raw.replace("end", "");
+            int offset = offsetStr.isEmpty() ? 0 : Integer.parseInt(offsetStr);
+            return total + offset;
+        }
+
+        // Стара логіка для звичайних чисел
+        return Integer.parseInt(raw) - 1; // -1 бо юзер рахує з одиниці
     }
 }

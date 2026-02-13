@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.IntStream;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
@@ -71,10 +72,11 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
             if (run.getInput() != null && !run.getInput().isEmpty()) {
                 log.debug("Опа, є якийсь ввід, щас будем сосати букви з рідера");
                 do {
-                    log.debug("Смокчем по одній букві, блядь, як шлюхи");
-                    finalLog.append((char) reader.read());
+                    char letter = (char) reader.read();
+                    finalLog.append(letter);
+                    System.out.print(letter);
                     try {
-                        Thread.sleep(50);
+                        Thread.sleep(3);
                     } catch (InterruptedException e) {
                         log.debug("Якийсь підарас перебив нам сон, сука");
                         throw new RuntimeException(e);
@@ -91,7 +93,19 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
             writer.write("echo " + uniqueMarker + "\n");
             writer.flush();
 
-            while ((line = reader.readLine()) != null) {
+            while (true) {
+                while (run.getInput() != null && !finalLog.toString().contains(run.getInput())) {
+                    if (reader.ready()) {
+                        finalLog.append((char) reader.read());
+                    }
+                    try {
+                        Thread.sleep(5);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+
+                line = reader.readLine();
                 log.debug("Зчитали строку, блядь: '{}'", line);
 
                 if (line.contains("echo " + uniqueMarker)) {
