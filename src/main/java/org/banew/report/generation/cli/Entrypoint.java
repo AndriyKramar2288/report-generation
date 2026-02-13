@@ -83,7 +83,7 @@ public class Entrypoint implements Runnable {
                 URI romSource = inputReportMd.toURI();
 
                 log.debug("Визиваєм магію створення ROM об'єкта");
-                var rom = ReportObjectModel.create(romSource);
+                var rom = ReportObjectModel.create(romSource, contextPath);
 
                 log.debug("Єбать, воно вижило! Ось який ROM ми зліпили: {}", rom);
 

@@ -9,7 +9,7 @@ properties:
     student_group: ФЕІ-36с
     teacher_name: доц. Пеніс
     departament_name: Кафедра оптоелектроніки та інформаційних технологій
-code_paths:  
+codes:  
 - "*/**/**.java"
 photos:
     bash:

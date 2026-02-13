@@ -26,8 +26,13 @@ import org.slf4j.LoggerFactory;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ReportBuilder {
 
@@ -77,6 +82,18 @@ public class ReportBuilder {
         }
 
         log.debug("Всьо, блядь, розходимся. Звіт готовий, я спать!");
+    }
+
+    private static List<Path> resolveFiles(Path rootPath, String pattern) throws IOException {
+
+        final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
+
+        try (Stream<Path> stream = Files.walk(rootPath)) {
+            return stream
+                    .filter(path -> !Files.isDirectory(path))
+                    .filter(matcher::matches)
+                    .collect(Collectors.toList());
+        }
     }
 
     private static byte[] convertDocxToPdf(byte[] data) throws Exception {
@@ -154,7 +171,12 @@ public class ReportBuilder {
             }
             p.setSpacingBetween(1.5);
             for (XWPFRun run : p.getRuns()) {
-                run.setFontFamily("Times New Roman");
+                if (!"JetBrains Mono".equals(run.getFontFamily())) {
+                    run.setFontFamily("Times New Roman");
+                }
+                else {
+                    p.setSpacingBetween(1);
+                }
                 run.setColor("000000");
             }
         }
@@ -186,6 +208,7 @@ public class ReportBuilder {
 
             IContext context = report.createContext();
             context.put("content", model.getContent());
+            context.put("codeMap", model.getCodeFileNameToContentMap());
             model.getProperties().forEach((k, v) -> {
                 log.debug("Пхаєм в контекст: {} = {}", k, v);
                 context.put(k, v);

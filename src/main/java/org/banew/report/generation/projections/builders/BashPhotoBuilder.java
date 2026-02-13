@@ -15,7 +15,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.IntStream;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
@@ -74,9 +73,8 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
                 do {
                     char letter = (char) reader.read();
                     finalLog.append(letter);
-                    System.out.print(letter);
                     try {
-                        Thread.sleep(3);
+                        Thread.sleep(10);
                     } catch (InterruptedException e) {
                         log.debug("Якийсь підарас перебив нам сон, сука");
                         throw new RuntimeException(e);
@@ -93,14 +91,16 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
             writer.write("echo " + uniqueMarker + "\n");
             writer.flush();
 
+            long startWait = System.currentTimeMillis();
             while (true) {
                 while (run.getInput() != null && !finalLog.toString().contains(run.getInput())) {
                     if (reader.ready()) {
                         finalLog.append((char) reader.read());
                     }
                     try {
-                        Thread.sleep(5);
+                        Thread.sleep(10);
                     } catch (InterruptedException e) {
+                        log.debug("ХТО СУКААА");
                         throw new RuntimeException(e);
                     }
                 }

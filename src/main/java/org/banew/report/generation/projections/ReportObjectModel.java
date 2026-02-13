@@ -1,5 +1,6 @@
 package org.banew.report.generation.projections;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,12 +22,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -35,8 +35,13 @@ public class ReportObjectModel {
     private static final Logger log = LoggerFactory.getLogger(ReportObjectModel.class);
 
     private Map<String, String> properties;
+    private List<String> codes = new ArrayList<>();
     private Photos photos;
+
+    @JsonIgnore
     private String content;
+    @JsonIgnore
+    private Map<String, String> codeFileNameToContentMap = new HashMap<>();
 
     @Data
     @AllArgsConstructor
@@ -49,7 +54,7 @@ public class ReportObjectModel {
 
     protected ReportObjectModel() {}
 
-    public static ReportObjectModel create(URI romSource) {
+    public static ReportObjectModel create(URI romSource, Path contextPath) {
         log.debug("Блядь, пробуєм роздуплити цей файл: {}", romSource);
         try {
             log.debug("Читаєм цю хуйню з діска, надійся, шо там не пусто");
@@ -73,6 +78,18 @@ public class ReportObjectModel {
                 ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
 
                 var obj = mapper.readValue(yamlText, ReportObjectModel.class);
+
+                obj.getCodes().forEach(pattern -> {
+                    var files = resolveFiles(contextPath, pattern);
+                    files.forEach(file -> {
+                        try {
+                            obj.getCodeFileNameToContentMap()
+                                    .put(file.toFile().getName(), Files.readString(file));
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+                });
 
                 log.debug("Рендерим остальну парашу в HTML, шоб було красиво, блядь");
                 String htmlContent = renderer.render(
@@ -98,5 +115,20 @@ public class ReportObjectModel {
 
         log.debug("Вертаєм null, бо ми рукожопи і нічо не знайшли");
         return null;
+    }
+
+    private static List<Path> resolveFiles(Path rootPath, String pattern) {
+
+        final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
+
+        try (Stream<Path> stream = Files.walk(rootPath)) {
+            return stream
+                    .filter(path -> !Files.isDirectory(path))
+                    .filter(matcher::matches)
+                    .collect(Collectors.toList());
+        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
