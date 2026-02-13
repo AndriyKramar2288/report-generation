@@ -1,0 +1,172 @@
+package org.banew.report.generation;
+
+import com.sun.jna.platform.win32.User32;
+import com.sun.jna.ptr.IntByReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.nio.file.Path;
+import java.util.List;
+
+public class ShellRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(ShellRunner.class);
+
+    public static String runAllInOneSession(Path context, List<? extends BashRun> runs, boolean hide) throws IOException {
+        log.debug("Сука, заводим цю колимагу cmd.exe, шоб вона всралась");
+        ProcessBuilder pb = new ProcessBuilder("cmd.exe");
+        pb.environment().put("PYTHONIOENCODING", "utf-8");
+        pb.environment().put("LANG", "en_US.UTF-8");
+        pb.directory(context.toFile());
+        pb.redirectErrorStream(true);
+
+        Process shell = pb.start();
+        StringBuilder finalLog = new StringBuilder();
+
+        Thread terminator = null;
+        if (hide) {
+            log.debug("Визиваєм кіллера-термінатора, хай пиздячить вікна нахуй");
+            terminator = new Terminator(shell);
+            terminator.start();
+        }
+
+        BufferedWriter writer = new BufferedWriter(
+                new OutputStreamWriter(shell.getOutputStream()));
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(shell.getInputStream()));
+
+        String uniqueMarker = "COMMAND_FINISHED_MARKER";
+        String line;
+
+        for (BashRun run : runs) {
+            log.debug("Стартуєм новий запуск: '{}', вхідна хуйня: '{}'", run.getCommand(), run.getInput());
+            writer.write(run.getCommand() + "\n");
+            writer.flush();
+
+            if (run.getInput() != null && !run.getInput().isEmpty()) {
+                log.debug("Опа, є якийсь ввід, щас будем сосати букви з рідера");
+                do {
+                    char letter = (char) reader.read();
+                    finalLog.append(letter);
+                    try {
+                        Thread.sleep(25);
+                    } catch (InterruptedException e) {
+                        log.debug("Якийсь підарас перебив нам сон, сука");
+                        throw new RuntimeException(e);
+                    }
+                } while (reader.ready());
+
+                log.debug("Пхаєм в лог і в прогу цей йобаний ввід");
+                finalLog.append(run.getInput()).append("\n");
+                writer.write(run.getInput() + "\n");
+                writer.flush();
+            }
+
+            log.debug("Швиряєм маркер, шоб знати, де ця параша кінчається");
+            writer.write("echo " + uniqueMarker + "\n");
+            writer.flush();
+
+            long startWait = System.currentTimeMillis();
+            while (true) {
+                while (run.getInput() != null && !finalLog.toString().contains(run.getInput())) {
+                    if (reader.ready()) {
+                        finalLog.append((char) reader.read());
+                    }
+                    try {
+                        Thread.sleep(25);
+                    } catch (InterruptedException e) {
+                        log.debug("ХТО СУКААА");
+                        throw new RuntimeException(e);
+                    }
+                }
+
+                line = reader.readLine();
+                log.debug("Зчитали строку, блядь: '{}'", line);
+
+                if (line.contains("echo " + uniqueMarker)) {
+                    log.debug("Це просто ехо нашого маркера, ігнорим цю залупу");
+                    continue;
+                }
+
+                if (line.contains(uniqueMarker)) {
+                    log.debug("Єбать, надибали маркер! Обрізаєм лишню сперму");
+                    String before = line.substring(0, line.indexOf(uniqueMarker)).trim();
+                    if (!before.isEmpty()) {
+                        log.debug("Дописуєм в лог то, шо було перед маркером: '{}'", before);
+                        finalLog.append(before).append("\n");
+                    }
+                    break;
+                }
+
+                if (line.trim().isEmpty()) {
+                    log.debug("Строка пуста як голова депутата, скіпаєм");
+                    continue;
+                }
+
+                log.debug("Норм тема, пхаєм строку в фінальний лог");
+                finalLog.append(line).append("\n");
+            }
+        }
+
+        log.debug("Кажем cmd 'exit' і валим нахуй");
+        writer.write("exit\n");
+        writer.flush();
+
+        try {
+            log.debug("Ждем, пока цей труп шелла остаточно охолоне");
+            shell.waitFor();
+        } catch (InterruptedException e) {
+            log.debug("Блядь, і тут нас перебили, шо за хуйня");
+            throw new RuntimeException(e);
+        }
+
+        if (terminator != null) {
+            log.debug("Вирубаєм термінатора, хай іде курити");
+            terminator.interrupt();
+        }
+
+        log.debug("Всьо, блядь, готово. Вертаєм цей обриганий лог");
+        return finalLog.toString().trim();
+    }
+
+    public interface BashRun {
+        String getCommand();
+        String getInput();
+    }
+
+    private static class Terminator extends Thread {
+        private final Process shell;
+
+        public Terminator(Process shell) {
+            this.shell = shell;
+            setDaemon(true);
+        }
+
+        private static void terminateOnlyMyWindows(long targetPid) {
+            User32.INSTANCE.EnumWindows((hwnd, pointer) -> {
+                IntByReference windowPid = new IntByReference();
+                User32.INSTANCE.GetWindowThreadProcessId(hwnd, windowPid);
+
+                if (windowPid.getValue() == (int) targetPid) {
+                    log.debug("Надибали вікно підараса з PID {}. ГАСИ ЙОГО!", targetPid);
+                    User32.INSTANCE.PostMessage(hwnd, 0x0010, null, null);
+                }
+                return true;
+            }, null);
+        }
+
+        @Override
+        public void run() {
+            log.debug("Кіллер вийшов на охоту");
+            try {
+                while (!Thread.currentThread().isInterrupted() && shell.isAlive()) {
+                    shell.descendants().forEach(p -> terminateOnlyMyWindows(p.pid()));
+                    Thread.sleep(100);
+                }
+            } catch (InterruptedException ignored) {
+                log.debug("Кіллера повязали, він спать");
+            }
+        }
+    }
+}
