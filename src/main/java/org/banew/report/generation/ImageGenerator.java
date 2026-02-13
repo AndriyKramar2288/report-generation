@@ -5,12 +5,14 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Objects;
 
 public class ImageGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(ImageGenerator.class);
-    private static final File npmDir = new File(System.getProperty("user.dir"), "/npm");
+    private static final File npmDir = new File(findApplicationLocation(), "npm");
 
     public static File generateCodeImage(String inputPath) throws IOException, InterruptedException {
         log.debug("Так, блядь, готуємся фоткати код. Вхідна залупа: {}", inputPath);
@@ -38,6 +40,22 @@ public class ImageGenerator {
         else {
             log.debug("Пізда рулю! Carbon вернув якийсь лєвий код: {}. Розбирайся сам, чо воно здохло", exitCode);
             throw new RuntimeException("Process returned non-zero exit code: " + exitCode);
+        }
+    }
+
+    public static File findApplicationLocation() {
+        try {
+            Path codePath = Paths.get(
+                    ImageGenerator.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+
+            if (!codePath.toString().endsWith(".jar")) {
+                return new File(System.getProperty("user.dir"));
+            }
+
+            return codePath.getParent().toFile();
+        }
+        catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
