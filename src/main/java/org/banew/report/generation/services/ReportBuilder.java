@@ -45,7 +45,20 @@ public class ReportBuilder {
     private static final Logger log = LoggerFactory.getLogger(ReportBuilder.class);
     private final ToolsSource toolsSource;
 
-    public void generate(ReportObjectModel model,
+    /**
+     * Головний метод генерації звіту. Проводить повний цикл обробки: від завантаження
+     * шаблону до збереження вихідних файлів.
+     *
+     * @param model          Об'єктна модель звіту з даними для підстановки.
+     * @param template       Вхідний потік (InputStream) файлу-шаблону .docx.
+     * @param outputName     Базове ім'я вихідного файлу (без розширення).
+     * @param contextPath    Шлях до робочої директорії (контексту) для пошуку файлів.
+     * @param isDocxGenerate Чи потрібно зберігати результат у форматі DOCX.
+     * @param isPdfGenerate  Чи потрібно конвертувати та зберігати результат у форматі PDF.
+     * @return Список згенерованих файлів (File).
+     * @throws Exception У разі помилок обробки шаблону або проблем з доступом до файлів.
+     */
+    public List<File> generate(ReportObjectModel model,
                                 InputStream template,
                                 String outputName,
                                 Path contextPath,
@@ -72,23 +85,38 @@ public class ReportBuilder {
         log.debug("Час засирати документ картинками. Готуй дишіль!");
         data = loadImages(data, photos, contextPath);
 
+        List<File> outputFiles = new ArrayList<>();
+
         if (isDocxGenerate) {
             log.debug("Ліпим .docx файл: {}.docx. Хай юзери радуються", outputName);
-            try (FileOutputStream out = new FileOutputStream(outputName + ".docx")) {
+            File docx = new File(outputName + ".docx");
+            outputFiles.add(docx);
+            try (FileOutputStream out = new FileOutputStream(docx)) {
                 out.write(data);
             }
         }
 
         if (isPdfGenerate) {
             log.debug("Конвертим цю парашу в PDF, бо солідні люди ворд не читають");
-            try (FileOutputStream out = new FileOutputStream(outputName + ".pdf")) {
+            File pdf = new File(outputName + ".pdf");
+            outputFiles.add(pdf);
+            try (FileOutputStream out = new FileOutputStream(pdf)) {
                 out.write(convertDocxToPdf(data));
             }
         }
 
         log.debug("Всьо, блядь, розходимся. Звіт готовий, я спать!");
+        return outputFiles;
     }
 
+    /**
+     * Виконує пошук файлів у вказаній директорії за заданим шаблоном (glob pattern).
+     *
+     * @param rootPath Кореневий шлях для пошуку.
+     * @param pattern  Шаблон імені файлу (наприклад, "*.png").
+     * @return Список знайдених шляхів (Path).
+     * @throws IOException При помилках сканування файлової системи.
+     */
     private List<Path> resolveFiles(Path rootPath, String pattern) throws IOException {
 
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
@@ -101,6 +129,14 @@ public class ReportBuilder {
         }
     }
 
+    /**
+     * Конвертує масив байтів DOCX-документа у PDF-формат.
+     * Використовує внутрішній реєстр конвертерів XDocReport.
+     *
+     * @param data Масив байтів DOCX файлу.
+     * @return Масив байтів згенерованого PDF файлу.
+     * @throws Exception Якщо конвертер не знайдено або сталася помилка конвертації.
+     */
     private byte[] convertDocxToPdf(byte[] data) throws Exception {
         log.debug("Починаєм магічне перетворення гівна в PDF");
         try (InputStream in = new ByteArrayInputStream(data);
@@ -116,6 +152,16 @@ public class ReportBuilder {
         }
     }
 
+    /**
+     * Вставляє зображення в документ DOCX, замінюючи відповідні плейсхолдери {{key}}.
+     * Також виконує фінальну стилізацію документа (шрифти, міжрядкові інтервали).
+     *
+     * @param data        Масив байтів документа.
+     * @param images      Карта будівельників зображень.
+     * @param contextPath Шлях для розв'язання відносних шляхів зображень.
+     * @return Оновлений масив байтів документа.
+     * @throws Exception При помилках маніпуляції з XWPFDocument або відсутності файлів.
+     */
     private byte[] loadImages(byte[] data, Map<String, PhotoBuilder> images, Path contextPath) throws Exception {
         log.debug("Загружаєм картинки. Готовте пам'ять, щас буде боляче");
         XWPFDocument doc;
@@ -197,6 +243,14 @@ public class ReportBuilder {
         return out.toByteArray();
     }
 
+    /**
+     * Розраховує висоту зображення для вставки в документ, зберігаючи пропорції (Aspect Ratio).
+     *
+     * @param file        Файл зображення.
+     * @param targetWidth Цільова ширина в документі (в одиницях POI).
+     * @return Розрахована висота (не більше 600 пікселів для уникнення розривів сторінок).
+     * @throws Exception Якщо файл не є валідним зображенням.
+     */
     private int computeImageHeightByWidth(File file, int targetWidth) throws Exception {
         log.debug("Рахуєм висоту картинки, шоб вона не виглядала як розплющена сперма");
         try (FileInputStream is = new FileInputStream(file)) {
@@ -207,6 +261,15 @@ public class ReportBuilder {
         }
     }
 
+    /**
+     * Виконує підстановку текстових змінних у шаблон через Template Engine (Velocity).
+     *
+     * @param data  Масив байтів шаблону.
+     * @param model Модель даних.
+     * @return Документ з підставленими значеннями.
+     * @throws IOException          При помилках читання потоків.
+     * @throws XDocReportException При помилках обробки Velocity шаблону.
+     */
     private byte[] loadTemplateChanges(byte[] data, ReportObjectModel model) throws IOException, XDocReportException {
         log.debug("Запускаєм XDocReport і Velocity, хай міняють змінні на реальне гівно");
         try (InputStream templateStream = new ByteArrayInputStream(data)) {
@@ -231,6 +294,14 @@ public class ReportBuilder {
         }
     }
 
+    /**
+     * Виконує низькорівневу корекцію полів Word. Замінює текстовий маркер ${content}
+     * на об'єкт MERGEFIELD, що дозволяє XDocReport коректно вставляти складний HTML/Rich Text.
+     *
+     * @param data Масив байтів вхідного документа.
+     * @return Масив байтів модифікованого документа.
+     * @throws IOException При помилках маніпуляції з XML структурою DOCX.
+     */
     private byte[] loadCorrectField(byte[] data) throws IOException {
         log.debug("Маніпулюєм XML-курсором, шоб вставити MERGEFIELD. Чиста содомія!");
         XWPFDocument doc;

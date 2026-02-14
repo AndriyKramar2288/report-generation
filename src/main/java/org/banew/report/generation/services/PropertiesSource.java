@@ -13,6 +13,9 @@ import java.nio.file.Paths;
 @Singleton
 public class PropertiesSource {
 
+    /**
+     * Розташування теки "npm" з встановленими необхідними пакетами (як-от carbon-now)
+     */
     @Getter
     private File npmDir;
 
@@ -21,6 +24,10 @@ public class PropertiesSource {
         npmDir = new File(findApplicationLocation(), "npm");
     }
 
+    /**
+     * @return У разі, якщо програма запускається напряму, повертає корінь проекту. Якщо ж запускається з JAR, то
+     * повертається абсолютний шлях теки, в якій розташований JAR.
+     */
     private File findApplicationLocation() {
         try {
             Path codePath = Paths.get(

@@ -12,12 +12,36 @@ import java.io.*;
 import java.nio.file.Path;
 import java.util.List;
 
+/**
+ * Сервіс для виконання команд у єдиній сесії командного рядка Windows (cmd.exe).
+ * <p>
+ * Забезпечує інтерактивну взаємодію з процесом, дозволяючи виконувати послідовність
+ * команд, передавати вхідні дані (stdin) та перехоплювати вихідний потік (stdout/stderr).
+ * Використовує систему маркерів для синхронізації між окремими запусками в межах однієї сесії.
+ * </p>
+ *
+ * @author banew
+ */
 @RequiredArgsConstructor(onConstructor_ =  @Inject)
 @Singleton
 public class ShellRunner {
 
     private static final Logger log = LoggerFactory.getLogger(ShellRunner.class);
 
+    /**
+     * Запускає сесію cmd.exe та послідовно виконує список команд.
+     * <p>
+     * Метод підтримує передачу даних користувача в процеси, що очікують вводу.
+     * Для розмежування виводу різних команд використовується унікальний текстовий маркер.
+     * </p>
+     *
+     * @param context Робоча директорія, в якій буде запущено командний рядок.
+     * @param runs    Список об'єктів {@link BashRun}, що містять команди та дані для вводу.
+     * @param hide    Якщо {@code true}, запускає фоновий потік для приховування вікон
+     * дочірніх процесів (наприклад, вікна Python/Matplotlib).
+     * @return Повний лог консолі за всю сесію у вигляді рядка.
+     * @throws IOException Якщо виникла помилка при запуску процесу або роботі з потоками I/O.
+     */
     public String runAllInOneSession(Path context, List<? extends BashRun> runs, boolean hide) throws IOException {
         log.debug("Сука, заводим цю колимагу cmd.exe, шоб вона всралась");
         ProcessBuilder pb = new ProcessBuilder("cmd.exe");
@@ -135,19 +159,41 @@ public class ShellRunner {
         return finalLog.toString().trim();
     }
 
+    /**
+     * Інтерфейс, що описує одиницю запуску в межах сесії шелла.
+     */
     public interface BashRun {
+        /** @return Команда для виконання (наприклад, "python script.py"). */
         String getCommand();
+        /** @return Рядок, який буде передано в стандартний ввід процесу. */
         String getInput();
     }
 
+    /**
+     * Внутрішній потік-демон, призначений для автоматичного приховування вікон
+     * дочірніх процесів, запущених через cmd.exe.
+     * <p>
+     * Використовує JNA для взаємодії з Windows API (User32).
+     * </p>
+     */
     private static class Terminator extends Thread {
         private final Process shell;
 
+        /**
+         * Створює нового "Термінатора" для моніторингу конкретного процесу.
+         * @param shell Батьківський процес командного рядка.
+         */
         public Terminator(Process shell) {
             this.shell = shell;
             setDaemon(true);
         }
 
+        /**
+         * Виконує пошук вікон, що належать конкретному PID, та надсилає їм
+         * сигнал закриття (WM_CLOSE).
+         *
+         * @param targetPid PID процесу, чиї вікна потрібно приховати/закрити.
+         */
         private static void terminateOnlyMyWindows(long targetPid) {
             User32.INSTANCE.EnumWindows((hwnd, pointer) -> {
                 IntByReference windowPid = new IntByReference();
