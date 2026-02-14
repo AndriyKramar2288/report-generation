@@ -116,48 +116,54 @@ public class ReportBuilder {
             doc = new XWPFDocument(is);
         }
 
+        Map<String, File> builtImages = images.entrySet().stream().collect(
+                Collectors.toMap(Map.Entry::getKey, b -> {
+                    try {
+                        return b.getValue().build(contextPath);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }));
+
         List<XWPFParagraph> paragraphs = new ArrayList<>(doc.getParagraphs());
         int imageIndex = 0;
 
-        for (Map.Entry<String, ? extends PhotoBuilder> entry : images.entrySet()) {
-            String placeholder = "{{" + entry.getKey() + "}}";
-            log.debug("Шукаєм плейсхолдер '{}', шоб всунути туди результат", placeholder);
+        for (XWPFParagraph p : paragraphs) {
+            for (Map.Entry<String, File> entry : builtImages.entrySet()) {
+                String placeholder = "{{" + entry.getKey() + "}}";
+                log.debug("Шукаєм плейсхолдер '{}', шоб всунути туди результат", placeholder);
 
-            try (PhotoBuilder builder = entry.getValue()) {
-                File imageFile = builder.build(contextPath);
+                if (entry.getValue() != null && entry.getValue().exists()) {
+                    log.debug("Надибали файл '{}', пхаєм його в параграфи", entry.getValue().getName());
+                    if (p.getText().contains(placeholder)) {
+                        log.debug("О, попався, сука! Центруєм цей параграф і міняєм текст на фотку");
+                        p.setAlignment(ParagraphAlignment.CENTER);
 
-                if (imageFile != null && imageFile.exists()) {
-                    log.debug("Надибали файл '{}', пхаєм його в параграфи", imageFile.getName());
+                        for (XWPFRun run : p.getRuns()) {
+                            String runText = run.getText(0);
+                            if (runText != null && runText.contains(placeholder)) {
+                                run.setText(runText.replace(placeholder, ""), 0);
 
-                    for (XWPFParagraph p : paragraphs) {
-                        if (p.getText().contains(placeholder)) {
-                            log.debug("О, попався, сука! Центруєм цей параграф і міняєм текст на фотку");
-                            p.setAlignment(ParagraphAlignment.CENTER);
-
-                            for (XWPFRun run : p.getRuns()) {
-                                String runText = run.getText(0);
-                                if (runText != null && runText.contains(placeholder)) {
-                                    run.setText(runText.replace(placeholder, ""), 0);
-
-                                    try (FileInputStream is = new FileInputStream(imageFile)) {
-                                        log.debug("Вставляєм картинку і підписуєм, шо це рис. {}", imageIndex + 1);
-                                        run.addPicture(is, XWPFDocument.PICTURE_TYPE_PNG,
-                                                imageFile.getName(), Units.toEMU(350),
-                                                Units.toEMU(computeImageHeightByWidth(imageFile, 350)));
-                                        run.addBreak();
-                                        run.setText("Рис. " + ++imageIndex + " " + builder.getLabel());
-                                        run.addBreak();
-                                    }
+                                try (FileInputStream is = new FileInputStream(entry.getValue())) {
+                                    log.debug("Вставляєм картинку і підписуєм, шо це рис. {}", imageIndex + 1);
+                                    run.addPicture(is, XWPFDocument.PICTURE_TYPE_PNG,
+                                            entry.getValue().getName(), Units.toEMU(350),
+                                            Units.toEMU(computeImageHeightByWidth(entry.getValue(), 350)));
+                                    run.addBreak();
+                                    run.setText("Рис. " + ++imageIndex + " " + images.get(entry.getKey()).getLabel());
+                                    run.addBreak();
                                 }
                             }
                         }
                     }
-                    imageFile.delete();
+
                 } else {
                     log.debug("Фотки для '{}' нема, скіпаєм цю пусту залупу", placeholder);
                 }
             }
         }
+
+        builtImages.values().forEach(File::delete);
 
         log.debug("Причісуєм стилі, шоб всьо було по ГОСТу, блядь. Таймс нью роман, всі діла");
         for (XWPFParagraph p : doc.getParagraphs()) {
