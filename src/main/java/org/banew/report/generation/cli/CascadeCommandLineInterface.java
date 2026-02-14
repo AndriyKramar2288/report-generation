@@ -55,16 +55,17 @@ public class CascadeCommandLineInterface implements Runnable {
             var lab = cos.getLabs().get(i - 1);
             Path labRoot = Path.of("lab-" + i);
 
-            for (LabModel.LabFile file : lab.getFiles()) {
-                createFileWithDirs(labRoot.resolve(file.getName()), file.getContent());
-                log.debug("Створено файл {}", file.getName());
-            }
-
             if (!lab.getShellCommands().isEmpty()) {
                 log.debug("Запуск скриптів ({} штуки)", lab.getShellCommands().size());
                 var shellResult = ShellRunner.runAllInOneSession(labRoot, lab.getShellCommands(), true);
                 log.debug("Результат виконання скрипта: {}", shellResult);
             }
+
+            for (LabModel.LabFile file : lab.getFiles()) {
+                createFileWithDirs(labRoot.resolve(file.getName()), file.getContent());
+                log.debug("Створено файл {}", file.getName());
+            }
+
             log.debug("Створення файлу об'єктної моделі лабки");
             Files.writeString(labRoot.resolve("rom.md"), lab.getReport(), StandardCharsets.UTF_8);
         }
