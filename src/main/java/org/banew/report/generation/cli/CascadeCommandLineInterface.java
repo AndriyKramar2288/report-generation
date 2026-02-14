@@ -1,10 +1,12 @@
 package org.banew.report.generation.cli;
 
 import jakarta.xml.bind.JAXBException;
+import org.banew.report.generation.ReportBuilder;
 import org.banew.report.generation.ShellRunner;
 import org.banew.report.generation.cascade.XmlUtils;
 import org.banew.report.generation.cascade.xml.CourseObjectModel;
 import org.banew.report.generation.cascade.xml.LabModel;
+import org.banew.report.generation.projections.ReportObjectModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -13,6 +15,9 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @CommandLine.Command(
         name = "cascade"
@@ -20,21 +25,23 @@ import java.nio.file.Path;
 public class CascadeCommandLineInterface implements Runnable {
 
     private static final Logger log = LoggerFactory.getLogger(CascadeCommandLineInterface.class);
+
     @CommandLine.Option(names = {"-com", "--CourseObjectModel"},
             description = "Розташування com.xml")
     private File comPath = new File("com.xml");
+
+    @CommandLine.Option(names = {"-b", "--build"}, description = "Почати побудову звітів після створення усіх файлів")
+    private boolean isBuild;
 
     @Override
     public void run() {
         try {
             if (!comPath.exists() || comPath.isDirectory() || !comPath.canRead() || !comPath.getName().endsWith(".xml")) {
                 givePrompt();
-            }
-            else {
+            } else {
                 process();
             }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
@@ -43,9 +50,9 @@ public class CascadeCommandLineInterface implements Runnable {
         CourseObjectModel cos = XmlUtils.unmashallCourseObjectModel(comPath);
         log.debug("Об'єкта модель курсу сформована");
 
-        for (int i = 0; i < cos.getLabs().size(); i++) {
+        for (int i = 1; i <= cos.getLabs().size(); i++) {
             log.debug("Початок обробки лабки №{}", i);
-            var lab = cos.getLabs().get(i);
+            var lab = cos.getLabs().get(i - 1);
             Path labRoot = Path.of("lab-" + i);
 
             for (LabModel.LabFile file : lab.getFiles()) {
@@ -58,9 +65,49 @@ public class CascadeCommandLineInterface implements Runnable {
                 var shellResult = ShellRunner.runAllInOneSession(labRoot, lab.getShellCommands(), true);
                 log.debug("Результат виконання скрипта: {}", shellResult);
             }
-
             log.debug("Створення файлу об'єктної моделі лабки");
-            Files.writeString(labRoot.resolve("lom.md"), lab.getReport(), StandardCharsets.UTF_8);
+            Files.writeString(labRoot.resolve("rom.md"), lab.getReport(), StandardCharsets.UTF_8);
+        }
+
+        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
+        if (isBuild) {
+            log.debug("Початок побудови звітів");
+            for (int i = 1; i <= cos.getLabs().size(); i++) {
+
+                int finalI = i;
+                Path labRoot = Path.of("lab-" + i);
+
+                executor.submit(() -> {
+                    log.debug("Початок побудови звіту №{}", finalI);
+                    try {
+                        var rom = ReportObjectModel.create(labRoot.resolve("rom.md").toUri(), labRoot);
+                        log.debug("Об'єктна модель звіту №{} побудована, переходимо до побудови файлу", finalI);
+                        ReportBuilder.generate(Objects.requireNonNull(rom),
+                                getClass().getResourceAsStream("/template.docx"),
+                                "report-" + finalI,
+                                labRoot,
+                                true,
+                                true);
+                    }
+                    catch (Exception e) {
+                        log.error("Побудова звіту №{} провалилась! Помилка: {}",
+                                finalI, e.getMessage());
+                    }
+                });
+            }
+        }
+
+        executor.shutdown();
+        log.info("Чекаємо на завершення формування всіх звітів...");
+        try {
+            if (!executor.awaitTermination(10, java.util.concurrent.TimeUnit.MINUTES)) {
+                log.error("Час вийшов, а звіти так і не добудувалися. Якась содомія...");
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
         }
     }
 

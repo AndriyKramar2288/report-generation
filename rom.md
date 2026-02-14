@@ -10,7 +10,7 @@ properties:
     teacher_name: доц. Пеніс
     departament_name: Кафедра оптоелектроніки та інформаційних технологій
 codes:  
-- "*/**/**.java"
+- "*/**/*.shell"
 photos:
     bash:
         gitler:

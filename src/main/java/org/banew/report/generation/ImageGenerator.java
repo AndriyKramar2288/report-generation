@@ -14,7 +14,7 @@ public class ImageGenerator {
     private static final Logger log = LoggerFactory.getLogger(ImageGenerator.class);
     private static final File npmDir = new File(findApplicationLocation(), "npm");
 
-    public static File generateCodeImage(String inputPath) throws IOException, InterruptedException {
+    public static synchronized File generateCodeImage(String inputPath) throws IOException, InterruptedException {
         log.debug("Так, блядь, готуємся фоткати код. Вхідна залупа: {}", inputPath);
         log.debug("Робоча каморка для npm: {}", npmDir.getAbsolutePath());
 
@@ -25,8 +25,8 @@ public class ImageGenerator {
                 "--headless"
         );
 
-//        log.debug("Наслєдуєм IO, шоб бачити в консолі, як ця сука мучиться");
-//        pb.inheritIO();
+        log.debug("Наслєдуєм IO, шоб бачити в консолі, як ця сука мучиться");
+        pb.inheritIO();
         pb.directory(npmDir);
 
         log.debug("Стартуєм процес. Тікай з городу, щас Carbon почне жерати оперативу!");

@@ -37,7 +37,6 @@ import java.util.stream.Stream;
 public class ReportBuilder {
 
     private static final Logger log = LoggerFactory.getLogger(ReportBuilder.class);
-    private static Path contextPath;
 
     public static void generate(ReportObjectModel model,
                                 InputStream template,
@@ -47,7 +46,6 @@ public class ReportBuilder {
                                 boolean isPdfGenerate) throws Exception {
 
         log.debug("Блядь, стартуєм глобальну хєрню. Тікай з городу, щас буде генерація!");
-        ReportBuilder.contextPath = contextPath;
 
         Map<String, PhotoBuilder> photos = new LinkedHashMap<>();
         log.debug("Згрібаєм всі фотки в одну кучу: баш, текст, картинки. Якийсь вінегрет, сука");
@@ -65,7 +63,7 @@ public class ReportBuilder {
         data = loadTemplateChanges(data, model);
 
         log.debug("Час засирати документ картинками. Готуй дишіль!");
-        data = loadImages(data, photos);
+        data = loadImages(data, photos, contextPath);
 
         if (isDocxGenerate) {
             log.debug("Ліпим .docx файл: {}.docx. Хай юзери радуються", outputName);
@@ -111,7 +109,7 @@ public class ReportBuilder {
         }
     }
 
-    private static byte[] loadImages(byte[] data, Map<String, PhotoBuilder> images) throws Exception {
+    private static byte[] loadImages(byte[] data, Map<String, PhotoBuilder> images, Path contextPath) throws Exception {
         log.debug("Загружаєм картинки. Готовте пам'ять, щас буде боляче");
         XWPFDocument doc;
         try (InputStream is = new ByteArrayInputStream(data)) {
@@ -192,7 +190,7 @@ public class ReportBuilder {
             BufferedImage bimg = ImageIO.read(is);
             int width = bimg.getWidth();
             int height = bimg.getHeight();
-            return Integer.min((int) ((double) height / (double) width * targetWidth), 500);
+            return Integer.min((int) ((double) height / (double) width * targetWidth), 600);
         }
     }
 

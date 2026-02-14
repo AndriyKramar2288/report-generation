@@ -124,7 +124,10 @@ public class ReportObjectModel {
         try (Stream<Path> stream = Files.walk(rootPath)) {
             return stream
                     .filter(path -> !Files.isDirectory(path))
-                    .filter(matcher::matches)
+                    .filter(path -> {
+                        Path relativePath = rootPath.relativize(path);
+                        return matcher.matches(relativePath);
+                    })
                     .collect(Collectors.toList());
         }
         catch (IOException e) {
