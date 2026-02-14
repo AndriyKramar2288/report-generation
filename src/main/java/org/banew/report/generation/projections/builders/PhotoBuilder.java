@@ -1,6 +1,8 @@
 package org.banew.report.generation.projections.builders;
 
 import lombok.Data;
+import org.banew.report.generation.services.ImageGenerator;
+import org.banew.report.generation.services.ToolsSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,5 +16,5 @@ public abstract class PhotoBuilder implements AutoCloseable {
     @Override
     public void close() throws Exception {}
 
-    public abstract File build(Path contextPath) throws IOException;
+    public abstract File build(Path contextPath, ToolsSource toolsSource) throws IOException;
 }

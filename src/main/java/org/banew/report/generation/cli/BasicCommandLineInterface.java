@@ -1,6 +1,8 @@
 package org.banew.report.generation.cli;
 
-import org.banew.report.generation.ReportBuilder;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import org.banew.report.generation.services.ReportBuilder;
 import org.banew.report.generation.projections.ReportObjectModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +22,7 @@ import java.util.Objects;
         description = "Побудувати фінальний DOCX на основі наданого MD-файлу",
         subcommands = CascadeCommandLineInterface.class
 )
+@Singleton
 public class BasicCommandLineInterface implements Runnable {
 
     private static final Logger log = LoggerFactory.getLogger(BasicCommandLineInterface.class);
@@ -66,6 +69,13 @@ public class BasicCommandLineInterface implements Runnable {
     @CommandLine.Option(names = {"-docx"}, description = "Генерувати DOCX")
     private boolean isDocxGenerate;
 
+    private final ReportBuilder reportBuilder;
+
+    @Inject
+    public BasicCommandLineInterface(ReportBuilder reportBuilder) {
+        this.reportBuilder = reportBuilder;
+    }
+
     @Override
     public void run() {
         log.debug("Запускаєм цю шарманку, блядь, в потоці main");
@@ -104,7 +114,7 @@ public class BasicCommandLineInterface implements Runnable {
                 // 6. Фінальний крок
                 log.info("Переходимо до стадії фінальної візуалізації та формування вихідних документів.");
 
-                ReportBuilder.generate(Objects.requireNonNull(rom),
+                reportBuilder.generate(Objects.requireNonNull(rom),
                         Objects.requireNonNull(template),
                         outputPath.getAbsolutePath(),
                         contextPath,

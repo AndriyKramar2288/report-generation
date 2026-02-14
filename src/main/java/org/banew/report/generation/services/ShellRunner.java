@@ -1,7 +1,10 @@
-package org.banew.report.generation;
+package org.banew.report.generation.services;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.sun.jna.platform.win32.User32;
 import com.sun.jna.ptr.IntByReference;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,11 +12,13 @@ import java.io.*;
 import java.nio.file.Path;
 import java.util.List;
 
+@RequiredArgsConstructor(onConstructor_ =  @Inject)
+@Singleton
 public class ShellRunner {
 
     private static final Logger log = LoggerFactory.getLogger(ShellRunner.class);
 
-    public static String runAllInOneSession(Path context, List<? extends BashRun> runs, boolean hide) throws IOException {
+    public String runAllInOneSession(Path context, List<? extends BashRun> runs, boolean hide) throws IOException {
         log.debug("Сука, заводим цю колимагу cmd.exe, шоб вона всралась");
         ProcessBuilder pb = new ProcessBuilder("cmd.exe");
         pb.environment().put("PYTHONIOENCODING", "utf-8");

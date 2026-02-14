@@ -1,5 +1,7 @@
-package org.banew.report.generation;
+package org.banew.report.generation.services;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import fr.opensagres.xdocreport.converter.ConverterRegistry;
 import fr.opensagres.xdocreport.converter.ConverterTypeTo;
 import fr.opensagres.xdocreport.converter.IConverter;
@@ -11,6 +13,7 @@ import fr.opensagres.xdocreport.document.IXDocReport;
 import fr.opensagres.xdocreport.document.registry.XDocReportRegistry;
 import fr.opensagres.xdocreport.template.IContext;
 import fr.opensagres.xdocreport.template.TemplateEngineKind;
+import lombok.RequiredArgsConstructor;
 import org.apache.poi.util.Units;
 import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
@@ -34,11 +37,15 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+
+@RequiredArgsConstructor(onConstructor_ =  @Inject)
+@Singleton
 public class ReportBuilder {
 
     private static final Logger log = LoggerFactory.getLogger(ReportBuilder.class);
+    private final ToolsSource toolsSource;
 
-    public static void generate(ReportObjectModel model,
+    public void generate(ReportObjectModel model,
                                 InputStream template,
                                 String outputName,
                                 Path contextPath,
@@ -82,7 +89,7 @@ public class ReportBuilder {
         log.debug("Всьо, блядь, розходимся. Звіт готовий, я спать!");
     }
 
-    private static List<Path> resolveFiles(Path rootPath, String pattern) throws IOException {
+    private List<Path> resolveFiles(Path rootPath, String pattern) throws IOException {
 
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
 
@@ -94,7 +101,7 @@ public class ReportBuilder {
         }
     }
 
-    private static byte[] convertDocxToPdf(byte[] data) throws Exception {
+    private byte[] convertDocxToPdf(byte[] data) throws Exception {
         log.debug("Починаєм магічне перетворення гівна в PDF");
         try (InputStream in = new ByteArrayInputStream(data);
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -109,7 +116,7 @@ public class ReportBuilder {
         }
     }
 
-    private static byte[] loadImages(byte[] data, Map<String, PhotoBuilder> images, Path contextPath) throws Exception {
+    private byte[] loadImages(byte[] data, Map<String, PhotoBuilder> images, Path contextPath) throws Exception {
         log.debug("Загружаєм картинки. Готовте пам'ять, щас буде боляче");
         XWPFDocument doc;
         try (InputStream is = new ByteArrayInputStream(data)) {
@@ -119,7 +126,7 @@ public class ReportBuilder {
         Map<String, File> builtImages = images.entrySet().stream().collect(
                 Collectors.toMap(Map.Entry::getKey, b -> {
                     try {
-                        return b.getValue().build(contextPath);
+                        return b.getValue().build(contextPath, toolsSource);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
@@ -190,7 +197,7 @@ public class ReportBuilder {
         return out.toByteArray();
     }
 
-    private static int computeImageHeightByWidth(File file, int targetWidth) throws Exception {
+    private int computeImageHeightByWidth(File file, int targetWidth) throws Exception {
         log.debug("Рахуєм висоту картинки, шоб вона не виглядала як розплющена сперма");
         try (FileInputStream is = new FileInputStream(file)) {
             BufferedImage bimg = ImageIO.read(is);
@@ -200,7 +207,7 @@ public class ReportBuilder {
         }
     }
 
-    private static byte[] loadTemplateChanges(byte[] data, ReportObjectModel model) throws IOException, XDocReportException {
+    private byte[] loadTemplateChanges(byte[] data, ReportObjectModel model) throws IOException, XDocReportException {
         log.debug("Запускаєм XDocReport і Velocity, хай міняють змінні на реальне гівно");
         try (InputStream templateStream = new ByteArrayInputStream(data)) {
             IXDocReport report = XDocReportRegistry.getRegistry()
@@ -224,7 +231,7 @@ public class ReportBuilder {
         }
     }
 
-    private static byte[] loadCorrectField(byte[] data) throws IOException {
+    private byte[] loadCorrectField(byte[] data) throws IOException {
         log.debug("Маніпулюєм XML-курсором, шоб вставити MERGEFIELD. Чиста содомія!");
         XWPFDocument doc;
         try (InputStream is = new ByteArrayInputStream(data)) {

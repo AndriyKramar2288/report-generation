@@ -2,7 +2,8 @@ package org.banew.report.generation.projections.builders;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import org.banew.report.generation.ImageGenerator;
+import org.banew.report.generation.services.ShellRunner;
+import org.banew.report.generation.services.ToolsSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,9 +19,13 @@ public abstract class TextContainingPhotoBuilder extends PhotoBuilder {
 
     private static final Logger log = LoggerFactory.getLogger(TextContainingPhotoBuilder.class);
     private String slice;
+    protected ToolsSource toolsSource;
 
     @Override
-    public final File build(Path contextPath) throws IOException {
+    public final File build(Path contextPath, ToolsSource toolsSource) throws IOException {
+
+        this.toolsSource = toolsSource;
+
         log.debug("Блядь, стартуєм білд картинки з якимось текстом. Контекст: {}", contextPath);
 
         log.debug("Визиваєм абстрактну хуйню, хай родить нам текстовий файл");
@@ -35,7 +40,7 @@ public abstract class TextContainingPhotoBuilder extends PhotoBuilder {
 
         try {
             log.debug("Пхаєм цей обрубок у ImageGenerator, хай малює шедевр, сука");
-            File generatedPhoto = ImageGenerator.generateCodeImage(textFile.getAbsolutePath());
+            File generatedPhoto = toolsSource.generateCodeImage(textFile.getAbsolutePath());
 
             if (slice != null) {
                 log.debug("Ми робили врємєнний обрубок для слайса, пора його прикопати");

@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.banew.report.generation.ShellRunner;
+import org.banew.report.generation.services.ShellRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +27,7 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
     @Override
     protected File buildTextFile(Path contextPath) throws IOException {
         log.debug("Запускаєм сесію, щас буде гарячо");
-        var resultString = ShellRunner.runAllInOneSession(contextPath, runs, hide);
+        var resultString = toolsSource.runAllInOneSession(contextPath, runs, hide);
 
         log.debug("Ліпим врємєнний файл, шоб запхати туди цей брєд");
         tempFile = Files.createTempFile("run", ".shell").toFile();

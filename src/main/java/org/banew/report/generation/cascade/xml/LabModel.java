@@ -2,7 +2,7 @@ package org.banew.report.generation.cascade.xml;
 
 import jakarta.xml.bind.annotation.*;
 import lombok.Data;
-import org.banew.report.generation.ShellRunner;
+import org.banew.report.generation.services.ShellRunner;
 
 import java.util.ArrayList;
 import java.util.List;

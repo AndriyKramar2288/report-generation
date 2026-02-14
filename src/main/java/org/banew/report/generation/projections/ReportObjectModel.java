@@ -36,7 +36,7 @@ public class ReportObjectModel {
 
     private Map<String, String> properties;
     private List<String> codes = new ArrayList<>();
-    private Photos photos;
+    private Photos photos = new Photos();
 
     @JsonIgnore
     private String content;

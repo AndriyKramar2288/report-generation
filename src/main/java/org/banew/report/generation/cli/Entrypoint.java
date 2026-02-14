@@ -1,5 +1,7 @@
 package org.banew.report.generation.cli;
 
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -33,7 +35,8 @@ public class Entrypoint {
         // 10. Початок розбору аргументів
         log.info("Аналіз параметрів командного рядка...");
 
-        int exitCode = new CommandLine(new BasicCommandLineInterface()).execute(args);
+        Injector injector = Guice.createInjector();
+        int exitCode = new CommandLine(injector.getInstance(BasicCommandLineInterface.class)).execute(args);
 
         // 11. Результат виконання
         log.info("Роботу застосунку завершено з кодом стану: {}", exitCode);

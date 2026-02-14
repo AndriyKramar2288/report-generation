@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.banew.report.generation.ImageGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

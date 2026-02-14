@@ -1,8 +1,10 @@
 package org.banew.report.generation.cli;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import jakarta.xml.bind.JAXBException;
-import org.banew.report.generation.ReportBuilder;
-import org.banew.report.generation.ShellRunner;
+import org.banew.report.generation.services.ReportBuilder;
+import org.banew.report.generation.services.ShellRunner;
 import org.banew.report.generation.cascade.XmlUtils;
 import org.banew.report.generation.cascade.xml.CourseObjectModel;
 import org.banew.report.generation.cascade.xml.LabModel;
@@ -22,6 +24,7 @@ import java.util.concurrent.Executors;
 @CommandLine.Command(
         name = "cascade"
 )
+@Singleton
 public class CascadeCommandLineInterface implements Runnable {
 
     private static final Logger log = LoggerFactory.getLogger(CascadeCommandLineInterface.class);
@@ -32,6 +35,15 @@ public class CascadeCommandLineInterface implements Runnable {
 
     @CommandLine.Option(names = {"-b", "--build"}, description = "Почати побудову звітів після створення усіх файлів")
     private boolean isBuild;
+
+    private final ReportBuilder reportBuilder;
+    private final ShellRunner shellRunner;
+
+    @Inject
+    public CascadeCommandLineInterface(ReportBuilder reportBuilder, ShellRunner shellRunner) {
+        this.reportBuilder = reportBuilder;
+        this.shellRunner = shellRunner;
+    }
 
     @Override
     public void run() {
@@ -57,7 +69,7 @@ public class CascadeCommandLineInterface implements Runnable {
 
             if (!lab.getShellCommands().isEmpty()) {
                 log.debug("Запуск скриптів ({} штуки)", lab.getShellCommands().size());
-                var shellResult = ShellRunner.runAllInOneSession(labRoot, lab.getShellCommands(), true);
+                var shellResult = shellRunner.runAllInOneSession(labRoot, lab.getShellCommands(), true);
                 log.debug("Результат виконання скрипта: {}", shellResult);
             }
 
@@ -84,7 +96,7 @@ public class CascadeCommandLineInterface implements Runnable {
                     try {
                         var rom = ReportObjectModel.create(labRoot.resolve("rom.md").toUri(), labRoot);
                         log.debug("Об'єктна модель звіту №{} побудована, переходимо до побудови файлу", finalI);
-                        ReportBuilder.generate(Objects.requireNonNull(rom),
+                        reportBuilder.generate(Objects.requireNonNull(rom),
                                 getClass().getResourceAsStream("/template.docx"),
                                 "report-" + finalI,
                                 labRoot,

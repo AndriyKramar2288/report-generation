@@ -2,6 +2,7 @@ package org.banew.report.generation.projections.builders;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.banew.report.generation.services.ToolsSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,7 +19,7 @@ public class DirectPhotoBuilder extends PhotoBuilder {
     private String file;
 
     @Override
-    public File build(Path contextPath) throws IOException {
+    public File build(Path contextPath, ToolsSource toolsSource) throws IOException {
         log.debug("Так, блядь, пробуєм надибати готову фотку: '{}'", file);
         log.debug("Риємся в оцій папці: {}", contextPath);
 

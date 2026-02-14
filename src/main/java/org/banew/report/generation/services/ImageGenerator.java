@@ -1,22 +1,25 @@
-package org.banew.report.generation;
+package org.banew.report.generation.services;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Objects;
 
+@RequiredArgsConstructor(onConstructor_ =  @Inject)
+@Singleton
 public class ImageGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(ImageGenerator.class);
-    private static final File npmDir = new File(findApplicationLocation(), "npm");
+    private final PropertiesSource propertiesSource;
 
-    public static synchronized File generateCodeImage(String inputPath) throws IOException, InterruptedException {
+    public synchronized File generateCodeImage(String inputPath) throws IOException, InterruptedException {
         log.debug("Так, блядь, готуємся фоткати код. Вхідна залупа: {}", inputPath);
-        log.debug("Робоча каморка для npm: {}", npmDir.getAbsolutePath());
+        log.debug("Робоча каморка для npm: {}", propertiesSource.getNpmDir().getAbsolutePath());
 
         log.debug("Запрягаєм npx carbon-now. Хай ця паскуда малює нам красу через headless-браузер");
         ProcessBuilder pb = new ProcessBuilder(
@@ -27,7 +30,7 @@ public class ImageGenerator {
 
         log.debug("Наслєдуєм IO, шоб бачити в консолі, як ця сука мучиться");
         pb.inheritIO();
-        pb.directory(npmDir);
+        pb.directory(propertiesSource.getNpmDir());
 
         log.debug("Стартуєм процес. Тікай з городу, щас Carbon почне жерати оперативу!");
         Process process = pb.start();
@@ -43,25 +46,9 @@ public class ImageGenerator {
         }
     }
 
-    public static File findApplicationLocation() {
-        try {
-            Path codePath = Paths.get(
-                    ImageGenerator.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-
-            if (!codePath.toString().endsWith(".jar")) {
-                return new File(System.getProperty("user.dir"));
-            }
-
-            return codePath.getParent().toFile();
-        }
-        catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static File findGeneratedFile() {
-        log.debug("Шманаєм папку '{}' на прєдмет свіжих .png фоток", npmDir.getName());
-        File[] files = npmDir.listFiles((d, name) -> name.endsWith(".png"));
+    private File findGeneratedFile() {
+        log.debug("Шманаєм папку '{}' на прєдмет свіжих .png фоток", propertiesSource.getNpmDir().getName());
+        File[] files = propertiesSource.getNpmDir().listFiles((d, name) -> name.endsWith(".png"));
 
         if (files == null || files.length == 0) {
             log.debug("Ну і де фотка? Обійшов всьо — ніхуя нема. Нас найбали, розходимся!");
