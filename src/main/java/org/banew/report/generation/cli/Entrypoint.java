@@ -36,7 +36,7 @@ public class Entrypoint {
         log.info("Аналіз параметрів командного рядка...");
 
         Injector injector = Guice.createInjector();
-        int exitCode = new CommandLine(injector.getInstance(BasicCommandLineInterface.class)).execute(args);
+        int exitCode = new CommandLine(BasicCommandLineInterface.class, injector::getInstance).execute(args);
 
         // 11. Результат виконання
         log.info("Роботу застосунку завершено з кодом стану: {}", exitCode);
