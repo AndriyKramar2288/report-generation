@@ -67,8 +67,10 @@ public class CascadeCommandLineInterface implements Runnable {
             var lab = cos.getLabs().get(i - 1);
             Path labRoot = Path.of("lab-" + i);
 
+            Files.createDirectories(labRoot);
+
             if (!lab.getShellCommands().isEmpty()) {
-                log.debug("Запуск скриптів ({} штуки)", lab.getShellCommands().size());
+                log.debug("Запуск скриптів ({} штуки) за директорією {}", lab.getShellCommands().size(), labRoot);
                 var shellResult = shellRunner.runAllInOneSession(labRoot, lab.getShellCommands(), true);
                 log.debug("Результат виконання скрипта: {}", shellResult);
             }
