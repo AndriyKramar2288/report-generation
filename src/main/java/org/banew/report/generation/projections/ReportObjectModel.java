@@ -11,6 +11,7 @@ import com.vladsch.flexmark.html.HtmlRenderer;
 import com.vladsch.flexmark.parser.Parser;
 import com.vladsch.flexmark.util.ast.Node;
 import com.vladsch.flexmark.util.data.MutableDataSet;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -36,6 +37,7 @@ public class ReportObjectModel {
 
     private Map<String, String> properties;
     private List<String> codes = new ArrayList<>();
+    @Valid
     private Photos photos = new Photos();
 
     @JsonIgnore
@@ -47,8 +49,11 @@ public class ReportObjectModel {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class Photos {
+        @Valid
         private Map<String, FilePhotoBuilder> text = new HashMap<>();
+        @Valid
         private Map<String, BashPhotoBuilder> bash = new HashMap<>();
+        @Valid
         private Map<String, DirectPhotoBuilder> images = new HashMap<>();
     }
 

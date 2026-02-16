@@ -2,10 +2,13 @@ package org.banew.report.generation.cli;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import jakarta.validation.Validator;
 import jakarta.xml.bind.JAXBException;
-import org.banew.report.generation.services.ReportBuilder;
+import lombok.RequiredArgsConstructor;
+import org.banew.report.generation.services.ProjectionValidator;
+import org.banew.report.generation.services.reports.ReportGenerationFacade;
 import org.banew.report.generation.services.ShellRunner;
-import org.banew.report.generation.cascade.XmlUtils;
+import org.banew.report.generation.services.XmlService;
 import org.banew.report.generation.cascade.xml.CourseObjectModel;
 import org.banew.report.generation.cascade.xml.LabModel;
 import org.banew.report.generation.projections.ReportObjectModel;
@@ -25,6 +28,7 @@ import java.util.concurrent.Executors;
         name = "cascade"
 )
 @Singleton
+@RequiredArgsConstructor(onConstructor_ = @Inject)
 public class CascadeCommandLineInterface implements Runnable {
 
     private static final Logger log = LoggerFactory.getLogger(CascadeCommandLineInterface.class);
@@ -36,14 +40,10 @@ public class CascadeCommandLineInterface implements Runnable {
     @CommandLine.Option(names = {"-b", "--build"}, description = "Почати побудову звітів після створення усіх файлів")
     private boolean isBuild;
 
-    private final ReportBuilder reportBuilder;
+    private final ReportGenerationFacade reportGenerationFacade;
     private final ShellRunner shellRunner;
-
-    @Inject
-    public CascadeCommandLineInterface(ReportBuilder reportBuilder, ShellRunner shellRunner) {
-        this.reportBuilder = reportBuilder;
-        this.shellRunner = shellRunner;
-    }
+    private final XmlService xmlService;
+    private final ProjectionValidator projectionValidator;
 
     @Override
     public void run() {
@@ -59,7 +59,8 @@ public class CascadeCommandLineInterface implements Runnable {
     }
 
     private void process() throws JAXBException, IOException {
-        CourseObjectModel cos = XmlUtils.unmashallCourseObjectModel(comPath);
+        CourseObjectModel cos = xmlService.unmashallCourseObjectModel(comPath);
+        projectionValidator.validate(cos);
         log.debug("Об'єкта модель курсу сформована");
 
         for (int i = 1; i <= cos.getLabs().size(); i++) {
@@ -97,8 +98,9 @@ public class CascadeCommandLineInterface implements Runnable {
                     log.debug("Початок побудови звіту №{}", finalI);
                     try {
                         var rom = ReportObjectModel.create(labRoot.resolve("rom.md").toUri(), labRoot);
+                        projectionValidator.validate(rom);
                         log.debug("Об'єктна модель звіту №{} побудована, переходимо до побудови файлу", finalI);
-                        reportBuilder.generate(Objects.requireNonNull(rom),
+                        reportGenerationFacade.generate(Objects.requireNonNull(rom),
                                 getClass().getResourceAsStream("/template.docx"),
                                 "report-" + finalI,
                                 labRoot,
@@ -143,7 +145,7 @@ public class CascadeCommandLineInterface implements Runnable {
         try (InputStream promptInput = this.getClass().getResourceAsStream("/prompt.md")) {
             if (promptInput != null) {
                 Files.copy(promptInput, Path.of("com.xml"));
-                XmlUtils.generateSchema();
+                xmlService.generateSchema();
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

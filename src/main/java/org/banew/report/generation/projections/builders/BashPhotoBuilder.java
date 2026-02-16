@@ -1,5 +1,7 @@
 package org.banew.report.generation.projections.builders;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -20,6 +22,7 @@ import java.util.List;
 public class BashPhotoBuilder extends TextContainingPhotoBuilder {
 
     private static final Logger log = LoggerFactory.getLogger(BashPhotoBuilder.class);
+    @Valid
     private List<YamlBashRun> runs = new ArrayList<>();
     private boolean hide = true;
     private File tempFile;
@@ -46,6 +49,7 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class YamlBashRun implements ShellRunner.BashRun {
+        @NotBlank(message = "Раз ви оголосили виклик, то він не може бути пустим!")
         private String command;
         private String input;
     }

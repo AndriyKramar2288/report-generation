@@ -2,7 +2,10 @@ package org.banew.report.generation.cli;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import org.banew.report.generation.services.ReportBuilder;
+import jakarta.validation.Validator;
+import lombok.RequiredArgsConstructor;
+import org.banew.report.generation.services.ProjectionValidator;
+import org.banew.report.generation.services.reports.ReportGenerationFacade;
 import org.banew.report.generation.projections.ReportObjectModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +26,7 @@ import java.util.Objects;
         subcommands = CascadeCommandLineInterface.class
 )
 @Singleton
+@RequiredArgsConstructor(onConstructor_ = @Inject)
 public class BasicCommandLineInterface implements Runnable {
 
     private static final Logger log = LoggerFactory.getLogger(BasicCommandLineInterface.class);
@@ -69,12 +73,8 @@ public class BasicCommandLineInterface implements Runnable {
     @CommandLine.Option(names = {"-docx"}, description = "Генерувати DOCX")
     private boolean isDocxGenerate;
 
-    private final ReportBuilder reportBuilder;
-
-    @Inject
-    public BasicCommandLineInterface(ReportBuilder reportBuilder) {
-        this.reportBuilder = reportBuilder;
-    }
+    private final ReportGenerationFacade reportGenerationFacade;
+    private final ProjectionValidator projectionValidator;
 
     @Override
     public void run() {
@@ -104,7 +104,7 @@ public class BasicCommandLineInterface implements Runnable {
                 // 4. Початок парсингу моделі
                 log.info("Здійснюється десериалізація контенту та побудова об'єктної моделі звіту.");
                 var rom = ReportObjectModel.create(romSource, contextPath);
-
+                projectionValidator.validate(rom);
                 log.debug("Єбать, воно вижило! Ось який ROM ми зліпили: {}", rom);
                 // 5. Успіх побудови моделі
                 log.info("Об'єктна модель успішно сформована. Кількість знайдених компонентів: {}",
@@ -114,7 +114,7 @@ public class BasicCommandLineInterface implements Runnable {
                 // 6. Фінальний крок
                 log.info("Переходимо до стадії фінальної візуалізації та формування вихідних документів.");
 
-                reportBuilder.generate(Objects.requireNonNull(rom),
+                reportGenerationFacade.generate(Objects.requireNonNull(rom),
                         Objects.requireNonNull(template),
                         outputPath.getAbsolutePath(),
                         contextPath,

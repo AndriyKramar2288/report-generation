@@ -1,5 +1,6 @@
-package org.banew.report.generation.cascade;
+package org.banew.report.generation.services;
 
+import com.google.inject.Singleton;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.SchemaOutputResolver;
@@ -11,11 +12,12 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.File;
 import java.io.IOException;
 
-public class XmlUtils {
+@Singleton
+public class XmlService {
 
-    private static final JAXBContext context;
+    private final JAXBContext context;
 
-    static {
+    public XmlService() {
         try {
             context = JAXBContext.newInstance(CourseObjectModel.class,
                     LabModel.class,
@@ -26,11 +28,11 @@ public class XmlUtils {
         }
     }
 
-    public static CourseObjectModel unmashallCourseObjectModel(File xml) throws JAXBException {
+    public CourseObjectModel unmashallCourseObjectModel(File xml) throws JAXBException {
         return (CourseObjectModel) context.createUnmarshaller().unmarshal(xml);
     }
 
-    public static void generateSchema() {
+    public void generateSchema() {
         try {
             context.generateSchema(new SchemaOutputResolver() {
                 @Override

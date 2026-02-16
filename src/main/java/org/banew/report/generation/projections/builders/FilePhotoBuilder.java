@@ -1,5 +1,6 @@
 package org.banew.report.generation.projections.builders;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -21,6 +22,7 @@ import java.util.stream.Stream;
 public class FilePhotoBuilder extends TextContainingPhotoBuilder {
 
     private static final Logger log = LoggerFactory.getLogger(FilePhotoBuilder.class);
+    @NotBlank(message = "Слід обов'язково вказати назву файлу!")
     private String name;
 
     private static File findFileContent(String fileName, Path root) {

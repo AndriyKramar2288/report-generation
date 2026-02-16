@@ -1,5 +1,7 @@
 package org.banew.report.generation.cascade.xml;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.xml.bind.annotation.*;
 import lombok.Data;
 
@@ -12,5 +14,6 @@ import java.util.List;
 public class CourseObjectModel {
     @XmlElementWrapper(name = "labs")
     @XmlElement(name = "lab")
+    @Valid
     private List<LabModel> labs = new ArrayList<>();
 }

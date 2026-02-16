@@ -87,8 +87,8 @@ class ImageGeneratorTest {
             }
         }
         finally {
-            executorService.awaitTermination(60, TimeUnit.SECONDS);
             executorService.shutdown();
+            executorService.awaitTermination(60, TimeUnit.SECONDS);
         }
     }
 

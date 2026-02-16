@@ -35,7 +35,7 @@ public class Entrypoint {
         // 10. Початок розбору аргументів
         log.info("Аналіз параметрів командного рядка...");
 
-        Injector injector = Guice.createInjector();
+        Injector injector = Guice.createInjector(new GuiceModule());
         int exitCode = new CommandLine(BasicCommandLineInterface.class, injector::getInstance).execute(args);
 
         // 11. Результат виконання

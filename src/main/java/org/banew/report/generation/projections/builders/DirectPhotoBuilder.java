@@ -1,5 +1,6 @@
 package org.banew.report.generation.projections.builders;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.banew.report.generation.services.ToolsSource;
@@ -16,6 +17,7 @@ import java.nio.file.Path;
 public class DirectPhotoBuilder extends PhotoBuilder {
 
     private static final Logger log = LoggerFactory.getLogger(DirectPhotoBuilder.class);
+    @NotBlank(message = "Слід обов'язково вказати файл!")
     private String file;
 
     @Override
