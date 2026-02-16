@@ -102,8 +102,8 @@ public class BasicCommandLineInterface implements Runnable {
                         contextPath,
                         outputPath,
                         template,
-                        isPdfGenerate,
-                        isDocxGenerate);
+                        isDocxGenerate,
+                        isPdfGenerate);
 
                 // 7. Тріумфальне завершення
                 log.info("Формування звіту завершено успішно. Результати збережено у: {}", outputPath.getParent());
