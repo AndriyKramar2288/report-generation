@@ -11,6 +11,8 @@ import javax.xml.transform.Result;
 import javax.xml.transform.stream.StreamResult;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 @Singleton
 public class XmlService {
@@ -32,14 +34,14 @@ public class XmlService {
         return (CourseObjectModel) context.createUnmarshaller().unmarshal(xml);
     }
 
-    public void generateSchema() {
+    public void generateSchema(Path root) {
         try {
             context.generateSchema(new SchemaOutputResolver() {
                 @Override
                 public Result createOutput(String namespaceUri, String suggestedFileName) throws IOException {
-                    suggestedFileName = "schema.xsd";
-                    StreamResult result = new StreamResult(new File(suggestedFileName));
-                    result.setSystemId(suggestedFileName);
+                    Path outputPath = root.resolve("schema.xsd");
+                    StreamResult result = new StreamResult(Files.newOutputStream(outputPath));
+                    result.setSystemId(outputPath.toUri().toASCIIString());
                     return result;
                 }
             });

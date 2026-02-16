@@ -160,6 +160,12 @@ public class ShellInteractiveRunner {
             writer.write("exit\n");
             writer.flush();
 
+            log.debug("Доїдаєм залишки логів перед смертю шелла...");
+            while ((line = reader.readLine()) != null) {
+                log.debug("Прилетіло \"на коня\": '{}'", line);
+                finalLog.append(line).append("\n");
+            }
+
             try {
                 log.debug("Ждем, пока цей труп шелла остаточно охолоне");
                 shell.waitFor();

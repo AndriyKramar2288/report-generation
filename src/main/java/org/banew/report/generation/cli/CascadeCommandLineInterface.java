@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 
 import java.io.File;
+import java.nio.file.Path;
 
 @CommandLine.Command(
         name = "cascade"
@@ -31,10 +32,11 @@ public class CascadeCommandLineInterface implements Runnable {
     @Override
     public void run() {
         try {
+            Path context = comPath.getParentFile().toPath();
             if (!comPath.exists() || comPath.isDirectory() || !comPath.canRead() || !comPath.getName().endsWith(".xml")) {
-                cascadeUsageFacade.givePrompt();
+                cascadeUsageFacade.givePrompt(context);
             } else {
-                cascadeUsageFacade.process(comPath, isBuild);
+                cascadeUsageFacade.process(context, isBuild);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);

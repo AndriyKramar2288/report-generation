@@ -29,7 +29,7 @@ public class ReportGenerationFacade {
      *
      * @param model          Об'єктна модель звіту з даними для підстановки.
      * @param template       Вхідний потік (InputStream) файлу-шаблону .docx.
-     * @param outputName     Базове ім'я вихідного файлу (без розширення).
+     * @param outputName     Базове ім'я вихідного файлу (без розширення) в межах контексту.
      * @param contextPath    Шлях до робочої директорії (контексту) для пошуку файлів.
      * @param isDocxGenerate Чи потрібно зберігати результат у форматі DOCX.
      * @param isPdfGenerate  Чи потрібно конвертувати та зберігати результат у форматі PDF.
@@ -67,7 +67,7 @@ public class ReportGenerationFacade {
 
         if (isDocxGenerate) {
             log.debug("Ліпим .docx файл: {}.docx. Хай юзери радуються", outputName);
-            File docx = new File(outputName + ".docx");
+            File docx = contextPath.resolve(outputName + ".docx").toFile();
             outputFiles.add(docx);
             try (FileOutputStream out = new FileOutputStream(docx)) {
                 out.write(data);
@@ -76,7 +76,7 @@ public class ReportGenerationFacade {
 
         if (isPdfGenerate) {
             log.debug("Конвертим цю парашу в PDF, бо солідні люди ворд не читають");
-            File pdf = new File(outputName + ".pdf");
+            File pdf = contextPath.resolve(outputName + ".pdf").toFile();
             outputFiles.add(pdf);
             try (FileOutputStream out = new FileOutputStream(pdf)) {
                 out.write(docxModifierService.convertDocxToPdf(data));

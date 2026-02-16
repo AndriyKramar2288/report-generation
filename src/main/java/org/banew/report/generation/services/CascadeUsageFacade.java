@@ -35,15 +35,15 @@ public class CascadeUsageFacade {
 
     private static final Logger log = LoggerFactory.getLogger(CascadeUsageFacade.class);
 
-    public void process(File comFile, boolean isBuild) throws JAXBException, IOException {
-        CourseObjectModel cos = xmlService.unmashallCourseObjectModel(comFile);
+    public void process(Path root, boolean isBuild) throws JAXBException, IOException {
+        CourseObjectModel cos = xmlService.unmashallCourseObjectModel(root.resolve("com.xml").toFile());
         projectionValidator.validate(cos);
         log.debug("Об'єкта модель курсу сформована");
 
         for (int i = 1; i <= cos.getLabs().size(); i++) {
             log.debug("Початок обробки лабки №{}", i);
             var lab = cos.getLabs().get(i - 1);
-            Path labRoot = Path.of("lab-" + i);
+            Path labRoot = root.resolve("lab-" + i);
 
             Files.createDirectories(labRoot);
 
@@ -69,7 +69,7 @@ public class CascadeUsageFacade {
             for (int i = 1; i <= cos.getLabs().size(); i++) {
 
                 int finalI = i;
-                Path labRoot = Path.of("lab-" + i);
+                Path labRoot = root.resolve("lab-" + i);
 
                 executor.submit(() -> {
                     log.debug("Початок побудови звіту №{}", finalI);
@@ -105,11 +105,11 @@ public class CascadeUsageFacade {
         }
     }
 
-    public void givePrompt() {
+    public void givePrompt(Path root) {
         try (InputStream promptInput = this.getClass().getResourceAsStream("/prompt.md")) {
             if (promptInput != null) {
-                Files.copy(promptInput, Path.of("com.xml"));
-                xmlService.generateSchema();
+                Files.copy(promptInput, root.resolve("com.xml"));
+                xmlService.generateSchema(root);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
