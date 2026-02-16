@@ -9,7 +9,7 @@ import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.banew.report.generation.projections.builders.PhotoBuilder;
-import org.banew.report.generation.services.ToolsSource;
+import org.banew.report.generation.services.components.ToolsSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

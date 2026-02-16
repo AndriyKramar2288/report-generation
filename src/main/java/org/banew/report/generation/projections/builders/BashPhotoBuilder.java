@@ -6,7 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.banew.report.generation.services.ShellRunner;
+import org.banew.report.generation.services.components.ShellRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

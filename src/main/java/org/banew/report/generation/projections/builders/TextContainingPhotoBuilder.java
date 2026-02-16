@@ -2,8 +2,7 @@ package org.banew.report.generation.projections.builders;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import org.banew.report.generation.services.ShellRunner;
-import org.banew.report.generation.services.ToolsSource;
+import org.banew.report.generation.services.components.ToolsSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

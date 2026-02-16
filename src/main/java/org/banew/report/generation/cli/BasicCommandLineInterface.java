@@ -2,11 +2,8 @@ package org.banew.report.generation.cli;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
-import org.banew.report.generation.services.ProjectionValidator;
-import org.banew.report.generation.services.reports.ReportGenerationFacade;
-import org.banew.report.generation.projections.ReportObjectModel;
+import org.banew.report.generation.services.BasicUsageFacade;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -19,7 +16,6 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Objects;
 
 @CommandLine.Command(
         description = "Побудувати фінальний DOCX на основі наданого MD-файлу",
@@ -73,8 +69,7 @@ public class BasicCommandLineInterface implements Runnable {
     @CommandLine.Option(names = {"-docx"}, description = "Генерувати DOCX")
     private boolean isDocxGenerate;
 
-    private final ReportGenerationFacade reportGenerationFacade;
-    private final ProjectionValidator projectionValidator;
+    private final BasicUsageFacade basicUsageFacade;
 
     @Override
     public void run() {
@@ -103,23 +98,12 @@ public class BasicCommandLineInterface implements Runnable {
                 log.debug("Визиваєм магію створення ROM об'єкта");
                 // 4. Початок парсингу моделі
                 log.info("Здійснюється десериалізація контенту та побудова об'єктної моделі звіту.");
-                var rom = ReportObjectModel.create(romSource, contextPath);
-                projectionValidator.validate(rom);
-                log.debug("Єбать, воно вижило! Ось який ROM ми зліпили: {}", rom);
-                // 5. Успіх побудови моделі
-                log.info("Об'єктна модель успішно сформована. Кількість знайдених компонентів: {}",
-                        (rom.getPhotos().getBash().size() + rom.getCodeFileNameToContentMap().size()));
-
-                log.debug("Запускаєм головний завод по генерації гівна. DOCX: {}, PDF: {}", isDocxGenerate, isPdfGenerate);
-                // 6. Фінальний крок
-                log.info("Переходимо до стадії фінальної візуалізації та формування вихідних документів.");
-
-                reportGenerationFacade.generate(Objects.requireNonNull(rom),
-                        Objects.requireNonNull(template),
-                        outputPath.getAbsolutePath(),
+                basicUsageFacade.process(romSource,
                         contextPath,
-                        isDocxGenerate,
-                        isPdfGenerate);
+                        outputPath,
+                        template,
+                        isPdfGenerate,
+                        isDocxGenerate);
 
                 // 7. Тріумфальне завершення
                 log.info("Формування звіту завершено успішно. Результати збережено у: {}", outputPath.getParent());

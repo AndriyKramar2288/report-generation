@@ -1,8 +1,7 @@
 package org.banew.report.generation.projections.builders;
 
 import lombok.Data;
-import org.banew.report.generation.services.ImageGenerator;
-import org.banew.report.generation.services.ToolsSource;
+import org.banew.report.generation.services.components.ToolsSource;
 
 import java.io.File;
 import java.io.IOException;

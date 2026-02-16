@@ -1,5 +1,7 @@
 package org.banew.report.generation.services;
 
+import org.banew.report.generation.services.components.ImageGenerator;
+import org.banew.report.generation.services.components.PropertiesSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,7 +18,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;

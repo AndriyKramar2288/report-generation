@@ -2,10 +2,9 @@ package org.banew.report.generation.cascade.xml;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.xml.bind.annotation.*;
 import lombok.Data;
-import org.banew.report.generation.services.ShellRunner;
+import org.banew.report.generation.services.components.ShellRunner;
 
 import java.util.ArrayList;
 import java.util.List;

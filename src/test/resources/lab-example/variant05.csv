@@ -1,0 +1,11 @@
+sale_id,manager,amount,region,date
+101,Doe,500.0,North,2023-01-01
+102,Smith,,South,2023-01-02
+103,Brown,750.0,,2023-01-03
+101,Doe,500.0,North,2023-01-01
+104,Wilson,1000000.0,East,2023-01-04
+105,Miller,450.0,West,2023-01-05
+106,Davis,600.0,North,2023-01-06
+107,Garcia,550.0,South,2023-01-07
+107,Garcia,550.0,South,2023-01-07
+108,Rodriguez,20.0,East,2023-01-08

@@ -1,4 +1,4 @@
-package org.banew.report.generation.services;
+package org.banew.report.generation.services.components;
 
 import com.google.inject.Singleton;
 import jakarta.xml.bind.JAXBContext;
