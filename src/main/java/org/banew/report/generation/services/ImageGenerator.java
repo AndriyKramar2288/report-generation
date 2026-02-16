@@ -7,8 +7,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 /**
@@ -41,11 +44,19 @@ public class ImageGenerator {
         );
 
         log.debug("Наслєдуєм IO, шоб бачити в консолі, як ця сука мучиться");
-        pb.inheritIO();
         pb.directory(propertiesSource.getNpmDir());
 
         log.debug("Стартуєм процес. Тікай з городу, щас Carbon почне жерати оперативу!");
         Process process = pb.start();
+
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                log.info("[Node.js] {}", line);
+            }
+        }
+
         int exitCode = process.waitFor();
 
         if (exitCode == 0) {

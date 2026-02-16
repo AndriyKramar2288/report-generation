@@ -35,7 +35,7 @@ public class ReportObjectModel {
 
     private static final Logger log = LoggerFactory.getLogger(ReportObjectModel.class);
 
-    private Map<String, String> properties;
+    private Map<String, String> properties = new HashMap<>();
     private List<String> codes = new ArrayList<>();
     @Valid
     private Photos photos = new Photos();
@@ -56,8 +56,6 @@ public class ReportObjectModel {
         @Valid
         private Map<String, DirectPhotoBuilder> images = new HashMap<>();
     }
-
-    protected ReportObjectModel() {}
 
     public static ReportObjectModel create(URI romSource, Path contextPath) {
         log.debug("Блядь, пробуєм роздуплити цей файл: {}", romSource);

@@ -15,12 +15,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
@@ -64,31 +63,33 @@ class ImageGeneratorTest {
     @Test
     @DisplayName("Успішно генерує фото при конкурентному доступі")
     void generateCodeImage_concurrentUsage_successResult(@TempDir Path tempDir) throws Exception {
-
         int cores = 4;
         ExecutorService executorService = Executors.newFixedThreadPool(cores);
+        List<Future<File>> futures = new ArrayList<>();
 
         when(propertiesSource.getNpmDir()).thenReturn(new File(System.getProperty("user.dir"), "npm"));
 
         try {
             for (int i = 0; i < cores; i++) {
                 Path testTextFile = tempDir.resolve("test" + i + ".txt");
-                String testTextFileAbsolutePath = testTextFile.toFile().getAbsolutePath();
-                Files.writeString(testTextFile, "Hello World");
+                Files.writeString(testTextFile, "Hello World " + i);
+                String path = testTextFile.toAbsolutePath().toString();
 
-                executorService.submit(() -> {
+                // Додаємо Future у список
+                futures.add(executorService.submit(() -> {
                     try {
-                        File generatedPhoto = imageGenerator.generateCodeImage(testTextFileAbsolutePath);
-                        assertGeneratedPhoto(generatedPhoto);
+                        return imageGenerator.generateCodeImage(path);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
-                });
+                }));
             }
-        }
-        finally {
+            for (Future<File> future : futures) {
+                assertGeneratedPhoto(future.get(30, TimeUnit.SECONDS));
+            }
+        } finally {
             executorService.shutdown();
-            executorService.awaitTermination(60, TimeUnit.SECONDS);
+            executorService.awaitTermination(10, TimeUnit.SECONDS);
         }
     }
 

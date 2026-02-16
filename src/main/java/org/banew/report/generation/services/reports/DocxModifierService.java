@@ -49,7 +49,7 @@ public class DocxModifierService {
      * @return Список знайдених шляхів (Path).
      * @throws IOException При помилках сканування файлової системи.
      */
-    private List<Path> resolveFiles(Path rootPath, String pattern) throws IOException {
+    public List<Path> resolveFiles(Path rootPath, String pattern) throws IOException {
 
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
 
