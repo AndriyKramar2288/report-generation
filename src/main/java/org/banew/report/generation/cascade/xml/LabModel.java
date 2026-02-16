@@ -31,9 +31,9 @@ public class LabModel {
     @Data
     @XmlAccessorType(XmlAccessType.FIELD)
     public static class LabFile {
-        @XmlAttribute(name = "name")
+        @XmlAttribute(name = "name", required = true)
         private String name;
-        @XmlElement(name = "content")
+        @XmlValue
         private String content;
     }
 }

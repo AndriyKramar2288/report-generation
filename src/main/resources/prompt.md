@@ -74,8 +74,7 @@ photos: # (ОПЦІОНАЛЬНО) цей блок описує фото, які
             <files>
 <!--                В цьому блоці оголошуються усі файли, які треба створити для того, щоб лабка взагалі працювала і можна було вже генерувати фінальний звіт на основі MD-->
 <!--                name кожного файлу - це шлях до нього відносно контекстного розташування. Зверни увагу, що теки оголошувати не потрібно, вони будуть створені автоматично!-->
-                <file name="src\test\java\org\banew\analabs\SmallestNumberFounderTest.java">
-                    <content><![CDATA[
+                <file name="src\test\java\org\banew\analabs\SmallestNumberFounderTest.java"><![CDATA[
 // Тут ПОВНИЙ вміст файлу
 package org.banew.analabs;
 
@@ -104,8 +103,7 @@ class SmallestNumberFounderTest {
         assertEquals(smallest, SmallestNumberFounder.findSmallest(numbers));
     }
 }
-]]></content>
-                </file>
+                ]]></file>
 <!--                Далі за потреби можна оголошувати ще більше файлів-->
             </files>
         </lab>
@@ -151,4 +149,3 @@ class SmallestNumberFounderTest {
   використовувати файли з <files> в командах <runs>!!! Щоб використовувати створені файли використовуй MD звіти,
   а саме їх різновид фото "bash"!
 - не використовуй кодові фрагменти `````` в MD-звітах
-- не забувай, що при створенні файлів код треба класти не напряму в <file>, а в вкладений в нього <content>!
