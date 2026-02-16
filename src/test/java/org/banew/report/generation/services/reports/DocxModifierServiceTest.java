@@ -64,7 +64,7 @@ class DocxModifierServiceTest {
 
         // 2. Тестуємо пошук усіх .txt файлів (має знайти і в корені, і в subdir)
         // Глоб "**/*.txt" каже: шукай в усіх теках рекурсивно
-        List<Path> txtFiles = docxModifierService.resolveFiles(tempDir, "glob:**/*.txt");
+        List<Path> txtFiles = docxModifierService.resolveFiles(tempDir, "**/*.txt");
 
         // 3. Ассерти
         assertEquals(2, txtFiles.size(), "Мало знайти рівно 2 текстових файли");
@@ -74,7 +74,7 @@ class DocxModifierServiceTest {
         assertFalse(txtFiles.contains(emptyDir), "Директорії мають ігноруватися фільтром !Files.isDirectory");
 
         // 4. Додаткова перевірка на специфічний файл
-        List<Path> singleFile = docxModifierService.resolveFiles(tempDir, "glob:**/test2.png");
+        List<Path> singleFile = docxModifierService.resolveFiles(tempDir, "**/test2.png");
         assertEquals(1, singleFile.size());
         assertEquals(file2, singleFile.get(0));
     }

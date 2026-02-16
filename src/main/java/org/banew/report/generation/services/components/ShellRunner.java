@@ -51,112 +51,137 @@ public class ShellRunner {
         pb.redirectErrorStream(true);
 
         Process shell = pb.start();
-        StringBuilder finalLog = new StringBuilder();
-
-        Thread terminator = null;
-        if (hide) {
-            log.debug("Визиваєм кіллера-термінатора, хай пиздячить вікна нахуй");
-            terminator = new Terminator(shell);
-            terminator.start();
-        }
-
-        BufferedWriter writer = new BufferedWriter(
-                new OutputStreamWriter(shell.getOutputStream()));
-        BufferedReader reader = new BufferedReader(
-                new InputStreamReader(shell.getInputStream()));
-
-        String uniqueMarker = "COMMAND_FINISHED_MARKER";
-        String line;
-
-        for (BashRun run : runs) {
-            log.debug("Стартуєм новий запуск: '{}', вхідна хуйня: '{}'", run.getCommand(), run.getInput());
-            writer.write(run.getCommand() + "\n");
-            writer.flush();
-
-            if (run.getInput() != null && !run.getInput().isEmpty()) {
-                log.debug("Опа, є якийсь ввід, щас будем сосати букви з рідера");
-                do {
-                    char letter = (char) reader.read();
-                    finalLog.append(letter);
-                    try {
-                        Thread.sleep(25);
-                    } catch (InterruptedException e) {
-                        log.debug("Якийсь підарас перебив нам сон, сука");
-                        throw new RuntimeException(e);
-                    }
-                } while (reader.ready());
-
-                log.debug("Пхаєм в лог і в прогу цей йобаний ввід");
-                finalLog.append(run.getInput()).append("\n");
-                writer.write(run.getInput() + "\n");
-                writer.flush();
-            }
-
-            log.debug("Швиряєм маркер, шоб знати, де ця параша кінчається");
-            writer.write("echo " + uniqueMarker + "\n");
-            writer.flush();
-
-            long startWait = System.currentTimeMillis();
-            while (true) {
-                while (run.getInput() != null && !finalLog.toString().contains(run.getInput())) {
-                    if (reader.ready()) {
-                        finalLog.append((char) reader.read());
-                    }
-                    try {
-                        Thread.sleep(25);
-                    } catch (InterruptedException e) {
-                        log.debug("ХТО СУКААА");
-                        throw new RuntimeException(e);
-                    }
-                }
-
-                line = reader.readLine();
-                log.debug("Зчитали строку, блядь: '{}'", line);
-
-                if (line.contains("echo " + uniqueMarker)) {
-                    log.debug("Це просто ехо нашого маркера, ігнорим цю залупу");
-                    continue;
-                }
-
-                if (line.contains(uniqueMarker)) {
-                    log.debug("Єбать, надибали маркер! Обрізаєм лишню сперму");
-                    String before = line.substring(0, line.indexOf(uniqueMarker)).trim();
-                    if (!before.isEmpty()) {
-                        log.debug("Дописуєм в лог то, шо було перед маркером: '{}'", before);
-                        finalLog.append(before).append("\n");
-                    }
-                    break;
-                }
-
-                if (line.trim().isEmpty()) {
-                    log.debug("Строка пуста як голова депутата, скіпаєм");
-                    continue;
-                }
-
-                log.debug("Норм тема, пхаєм строку в фінальний лог");
-                finalLog.append(line).append("\n");
-            }
-        }
-
-        log.debug("Кажем cmd 'exit' і валим нахуй");
-        writer.write("exit\n");
-        writer.flush();
-
         try {
-            log.debug("Ждем, пока цей труп шелла остаточно охолоне");
-            shell.waitFor();
-        } catch (InterruptedException e) {
-            log.debug("Блядь, і тут нас перебили, шо за хуйня");
-            throw new RuntimeException(e);
-        }
 
-        if (terminator != null) {
-            log.debug("Вирубаєм термінатора, хай іде курити");
-            terminator.interrupt();
-        }
+            StringBuilder finalLog = new StringBuilder();
 
-        log.debug("Всьо, блядь, готово. Вертаєм цей обриганий лог");
-        return finalLog.toString().trim();
+            Thread terminator = null;
+            if (hide) {
+                log.debug("Визиваєм кіллера-термінатора, хай пиздячить вікна нахуй");
+                terminator = new Terminator(shell);
+                terminator.start();
+            }
+
+            BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(shell.getOutputStream()));
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(shell.getInputStream()));
+
+            String uniqueMarker = "COMMAND_FINISHED_MARKER";
+            String line;
+
+            for (BashRun run : runs) {
+                log.debug("Стартуєм новий запуск: '{}', вхідна хуйня: '{}'", run.getCommand(), run.getInput());
+                writer.write(run.getCommand() + "\n");
+                writer.flush();
+
+                if (run.getInput() != null && !run.getInput().isEmpty()) {
+                    log.debug("Опа, є якийсь ввід, щас будем сосати букви з рідера");
+                    do {
+                        char letter = (char) reader.read();
+                        finalLog.append(letter);
+                        try {
+                            Thread.sleep(25);
+                        } catch (InterruptedException e) {
+                            log.debug("Якийсь підарас перебив нам сон, сука");
+                            throw new RuntimeException(e);
+                        }
+                    } while (reader.ready());
+
+                    log.debug("Пхаєм в лог і в прогу цей йобаний ввід");
+                    finalLog.append(run.getInput()).append("\n");
+                    writer.write(run.getInput() + "\n");
+                    writer.flush();
+                }
+
+                log.debug("Швиряєм маркер, шоб знати, де ця параша кінчається");
+                writer.write("echo ERROR_LEVEL:%ERRORLEVEL%\n");
+                writer.write("echo " + uniqueMarker + "\n");
+                writer.flush();
+
+                long startWait = System.currentTimeMillis();
+                while (true) {
+                    while (run.getInput() != null && !finalLog.toString().contains(run.getInput())) {
+                        if (reader.ready()) {
+                            finalLog.append((char) reader.read());
+                        }
+                        try {
+                            Thread.sleep(25);
+                        } catch (InterruptedException e) {
+                            log.debug("ХТО СУКААА");
+                            throw new RuntimeException(e);
+                        }
+                    }
+
+                    line = reader.readLine();
+                    log.debug("Зчитали строку, блядь: '{}'", line);
+
+                    if (line.contains("echo " + uniqueMarker) || line.contains("echo ERROR_LEVEL:")) {
+                        log.debug("Це просто ехо нашого маркера, ігнорим цю залупу");
+                        continue;
+                    }
+
+                    if (line.contains("ERROR_LEVEL:")) {
+                        String codeStr = line.substring(line.indexOf("ERROR_LEVEL:") + 12).trim();
+                        try {
+                            int exitCode = Integer.parseInt(codeStr);
+                            if (exitCode != 0) {
+                                log.error("Сука, команда '{}' впала з кодом {}!", run.getCommand(), exitCode);
+                                // Тут ти можеш або кинути ексепшн відразу, або помітити статус
+                                throw new RuntimeException("Команда впала, пайплайну пізда. Код: " + exitCode);
+                            }
+                        } catch (NumberFormatException e) {
+                            log.debug("Не зміг розпарсити код помилки, якась херня прийшла: {}", codeStr);
+                        }
+                        break; // Виходимо з циклу читання для цієї команди
+                    }
+
+                    if (line.contains(uniqueMarker)) {
+                        log.debug("Єбать, надибали маркер! Обрізаєм лишню сперму");
+                        String before = line.substring(0, line.indexOf(uniqueMarker)).trim();
+                        if (!before.isEmpty()) {
+                            log.debug("Дописуєм в лог то, шо було перед маркером: '{}'", before);
+                            finalLog.append(before).append("\n");
+                        }
+                        break;
+                    }
+
+                    if (line.trim().isEmpty()) {
+                        log.debug("Строка пуста як голова депутата, скіпаєм");
+                        continue;
+                    }
+
+                    log.debug("Норм тема, пхаєм строку в фінальний лог");
+                    finalLog.append(line).append("\n");
+                }
+            }
+
+            log.debug("Кажем cmd 'exit' і валим нахуй");
+            writer.write("exit\n");
+            writer.flush();
+
+            try {
+                log.debug("Ждем, пока цей труп шелла остаточно охолоне");
+                shell.waitFor();
+            } catch (InterruptedException e) {
+                log.debug("Блядь, і тут нас перебили, шо за хуйня");
+                throw new RuntimeException(e);
+            }
+
+            if (terminator != null) {
+                log.debug("Вирубаєм термінатора, хай іде курити");
+                terminator.interrupt();
+            }
+
+            log.debug("Всьо, блядь, готово. Вертаєм цей обриганий лог");
+            return finalLog.toString().trim();
+        }
+        finally {
+            log.debug("Закриваєм лавочку примусово");
+            if (shell.isAlive()) {
+                shell.destroyForcibly();
+            }
+        }
     }
 
     /**
