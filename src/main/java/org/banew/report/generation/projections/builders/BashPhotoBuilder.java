@@ -6,7 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.banew.report.generation.services.components.ShellRunner;
+import org.banew.report.generation.services.components.ShellInteractiveRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +48,7 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    public static class YamlBashRun implements ShellRunner.BashRun {
+    public static class YamlBashRun implements ShellInteractiveRunner.BashRun {
         @NotBlank(message = "Раз ви оголосили виклик, то він не може бути пустим!")
         private String command;
         private String input;

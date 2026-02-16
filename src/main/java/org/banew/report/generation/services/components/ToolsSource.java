@@ -13,7 +13,7 @@ import java.util.List;
 @Singleton
 public class ToolsSource {
     private final ImageGenerator imageGenerator;
-    private final ShellRunner shellRunner;
+    private final ShellInteractiveRunner shellInteractiveRunner;
 
     /**
      * Генерує файл зображення з вмістом деякого файлу
@@ -33,15 +33,15 @@ public class ToolsSource {
      * </p>
      *
      * @param context Робоча директорія, в якій буде запущено командний рядок.
-     * @param runs    Список об'єктів {@link ShellRunner.BashRun}, що містять команди та дані для вводу.
+     * @param runs    Список об'єктів {@link ShellInteractiveRunner.BashRun}, що містять команди та дані для вводу.
      * @param hide    Якщо {@code true}, запускає фоновий потік для приховування вікон
      * дочірніх процесів (наприклад, вікна Python/Matplotlib).
      * @return Повний лог консолі за всю сесію у вигляді рядка.
      * @throws IOException Якщо виникла помилка при запуску процесу або роботі з потоками I/O.
      */
     public String runAllInOneSession(Path context,
-                                     List<? extends ShellRunner.BashRun> runs,
+                                     List<? extends ShellInteractiveRunner.BashRun> runs,
                                      boolean hide) throws IOException {
-        return shellRunner.runAllInOneSession(context, runs, hide);
+        return shellInteractiveRunner.runAllInOneSession(context, runs, hide);
     }
 }

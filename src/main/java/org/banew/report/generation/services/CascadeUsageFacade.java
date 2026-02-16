@@ -8,7 +8,7 @@ import org.banew.report.generation.cascade.xml.CourseObjectModel;
 import org.banew.report.generation.cascade.xml.LabModel;
 import org.banew.report.generation.projections.ReportObjectModel;
 import org.banew.report.generation.services.components.ProjectionValidator;
-import org.banew.report.generation.services.components.ShellRunner;
+import org.banew.report.generation.services.components.ShellInteractiveRunner;
 import org.banew.report.generation.services.components.XmlService;
 import org.banew.report.generation.services.reports.ReportGenerationFacade;
 import org.slf4j.Logger;
@@ -29,7 +29,7 @@ import java.util.concurrent.Executors;
 public class CascadeUsageFacade {
 
     private final ReportGenerationFacade reportGenerationFacade;
-    private final ShellRunner shellRunner;
+    private final ShellInteractiveRunner shellInteractiveRunner;
     private final XmlService xmlService;
     private final ProjectionValidator projectionValidator;
 
@@ -49,7 +49,7 @@ public class CascadeUsageFacade {
 
             if (!lab.getShellCommands().isEmpty()) {
                 log.debug("Запуск скриптів ({} штуки) за директорією {}", lab.getShellCommands().size(), labRoot);
-                var shellResult = shellRunner.runAllInOneSession(labRoot, lab.getShellCommands(), true);
+                var shellResult = shellInteractiveRunner.runAllInOneSession(labRoot, lab.getShellCommands(), true);
                 log.debug("Результат виконання скрипта: {}", shellResult);
             }
 

@@ -4,7 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.xml.bind.annotation.*;
 import lombok.Data;
-import org.banew.report.generation.services.components.ShellRunner;
+import org.banew.report.generation.services.components.ShellInteractiveRunner;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +25,7 @@ public class LabModel {
 
     @Data
     @XmlAccessorType(XmlAccessType.FIELD)
-    public static class XmlShellCommand implements ShellRunner.BashRun {
+    public static class XmlShellCommand implements ShellInteractiveRunner.BashRun {
         @XmlAttribute(name = "command", required = true)
         @NotBlank(message = "Раз ви оголосили виклик, то він не може бути пустим!")
         private String command;
