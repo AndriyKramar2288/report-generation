@@ -3,6 +3,7 @@ package org.banew.report.generation.services.components;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.sun.jna.platform.win32.User32;
+import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.ptr.IntByReference;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -10,7 +11,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Сервіс для виконання команд у єдиній сесії командного рядка Windows (cmd.exe).
@@ -22,7 +25,7 @@ import java.util.List;
  *
  * @author banew
  */
-@RequiredArgsConstructor(onConstructor_ =  @Inject)
+@RequiredArgsConstructor(onConstructor_ = @Inject)
 @Singleton
 public class ShellInteractiveRunner {
 
@@ -38,7 +41,7 @@ public class ShellInteractiveRunner {
      * @param context Робоча директорія, в якій буде запущено командний рядок.
      * @param runs    Список об'єктів {@link BashRun}, що містять команди та дані для вводу.
      * @param hide    Якщо {@code true}, запускає фоновий потік для приховування вікон
-     * дочірніх процесів (наприклад, вікна Python/Matplotlib).
+     *                дочірніх процесів (наприклад, вікна Python/Matplotlib).
      * @return Повний лог консолі за всю сесію у вигляді рядка.
      * @throws IOException Якщо виникла помилка при запуску процесу або роботі з потоками I/O.
      */
@@ -181,8 +184,7 @@ public class ShellInteractiveRunner {
 
             log.debug("Всьо, блядь, готово. Вертаєм цей обриганий лог");
             return finalLog.toString().trim();
-        }
-        finally {
+        } finally {
             log.debug("Закриваєм лавочку примусово");
             if (shell.isAlive()) {
                 shell.destroyForcibly();
@@ -194,9 +196,14 @@ public class ShellInteractiveRunner {
      * Інтерфейс, що описує одиницю запуску в межах сесії шелла.
      */
     public interface BashRun {
-        /** @return Команда для виконання (наприклад, "python script.py"). */
+        /**
+         * @return Команда для виконання (наприклад, "python script.py").
+         */
         String getCommand();
-        /** @return Рядок, який буде передано в стандартний ввід процесу. */
+
+        /**
+         * @return Рядок, який буде передано в стандартний ввід процесу.
+         */
         String getInput();
     }
 
@@ -208,10 +215,13 @@ public class ShellInteractiveRunner {
      * </p>
      */
     private static class Terminator extends Thread {
+
+        private final Map<WinDef.HWND, Long> victimsRegistry = new HashMap<>();
         private final Process shell;
 
         /**
          * Створює нового "Термінатора" для моніторингу конкретного процесу.
+         *
          * @param shell Батьківський процес командного рядка.
          */
         public Terminator(Process shell) {
@@ -225,14 +235,26 @@ public class ShellInteractiveRunner {
          *
          * @param targetPid PID процесу, чиї вікна потрібно приховати/закрити.
          */
-        private static void terminateOnlyMyWindows(long targetPid) {
+        private void terminateOnlyMyWindows(long targetPid) {
             User32.INSTANCE.EnumWindows((hwnd, pointer) -> {
                 IntByReference windowPid = new IntByReference();
                 User32.INSTANCE.GetWindowThreadProcessId(hwnd, windowPid);
 
                 if (windowPid.getValue() == (int) targetPid) {
-                    log.debug("Надибали вікно підараса з PID {}. ГАСИ ЙОГО!", targetPid);
-                    User32.INSTANCE.PostMessage(hwnd, 0x0010, null, null);
+                    long currentTime = System.currentTimeMillis();
+
+                    victimsRegistry.putIfAbsent(hwnd, currentTime);
+
+                    long birthTime = victimsRegistry.get(hwnd);
+                    long age = currentTime - birthTime;
+
+                    if (age > 500) {
+                        log.debug("Вікну з PID {} вже {} мс. Час вийшов, бабай прийшов!", targetPid, age);
+                        User32.INSTANCE.PostMessage(hwnd, 0x0112, new WinDef.WPARAM(0xF060), new WinDef.LPARAM(0));
+                        victimsRegistry.remove(hwnd);
+                    } else {
+                        log.debug("Вікно PID {} ще молоде ({} мс), хай погуляє", targetPid, age);
+                    }
                 }
                 return true;
             }, null);
@@ -248,6 +270,8 @@ public class ShellInteractiveRunner {
                 }
             } catch (InterruptedException ignored) {
                 log.debug("Кіллера повязали, він спать");
+            } finally {
+                victimsRegistry.clear();
             }
         }
     }
