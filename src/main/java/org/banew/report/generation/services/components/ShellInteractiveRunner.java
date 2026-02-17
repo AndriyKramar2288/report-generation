@@ -55,7 +55,6 @@ public class ShellInteractiveRunner {
 
         Process shell = pb.start();
         try {
-
             StringBuilder finalLog = new StringBuilder();
 
             Thread terminator = null;
@@ -130,6 +129,7 @@ public class ShellInteractiveRunner {
                             int exitCode = Integer.parseInt(codeStr);
                             if (exitCode != 0) {
                                 log.error("Сука, команда '{}' впала з кодом {}!", run.getCommand(), exitCode);
+                                log.error("Полотно:\n{}", finalLog.toString());
                                 // Тут ти можеш або кинути ексепшн відразу, або помітити статус
                                 throw new RuntimeException("Команда впала, пайплайну пізда. Код: " + exitCode);
                             }

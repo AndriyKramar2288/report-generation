@@ -14,7 +14,6 @@ import org.banew.report.generation.services.reports.ReportGenerationFacade;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -35,7 +34,7 @@ public class CascadeUsageFacade {
 
     private static final Logger log = LoggerFactory.getLogger(CascadeUsageFacade.class);
 
-    public void process(Path root, boolean isBuild) throws JAXBException, IOException {
+    public void process(Path root, boolean isBuild, boolean isSameDirectory) throws JAXBException, IOException {
         CourseObjectModel cos = xmlService.unmashallCourseObjectModel(root.resolve("com.xml").toFile());
         projectionValidator.validate(cos);
         log.debug("Об'єкта модель курсу сформована");
@@ -43,7 +42,8 @@ public class CascadeUsageFacade {
         for (int i = 1; i <= cos.getLabs().size(); i++) {
             log.debug("Початок обробки лабки №{}", i);
             var lab = cos.getLabs().get(i - 1);
-            Path labRoot = root.resolve("lab-" + i);
+            Path labRoot = isSameDirectory ? root : root.resolve("lab-" + i);
+            String romFileName = isSameDirectory ? "rom" + i + ".md" : "rom.md";
 
             Files.createDirectories(labRoot);
 
@@ -59,7 +59,7 @@ public class CascadeUsageFacade {
             }
 
             log.debug("Створення файлу об'єктної моделі лабки");
-            Files.writeString(labRoot.resolve("rom.md"), lab.getReport(), StandardCharsets.UTF_8);
+            Files.writeString(labRoot.resolve(romFileName), lab.getReport(), StandardCharsets.UTF_8);
         }
 
         ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
@@ -69,12 +69,13 @@ public class CascadeUsageFacade {
             for (int i = 1; i <= cos.getLabs().size(); i++) {
 
                 int finalI = i;
-                Path labRoot = root.resolve("lab-" + i);
+                Path labRoot = isSameDirectory ? root : root.resolve("lab-" + i);
+                String romFileName = isSameDirectory ? "rom" + i + ".md" : "rom.md";
 
                 executor.submit(() -> {
                     log.debug("Початок побудови звіту №{}", finalI);
                     try {
-                        var rom = ReportObjectModel.create(labRoot.resolve("rom.md").toUri(), labRoot);
+                        var rom = ReportObjectModel.create(labRoot.resolve(romFileName).toUri(), labRoot);
                         projectionValidator.validate(rom);
                         log.debug("Об'єктна модель звіту №{} побудована, переходимо до побудови файлу", finalI);
                         reportGenerationFacade.generate(Objects.requireNonNull(rom),

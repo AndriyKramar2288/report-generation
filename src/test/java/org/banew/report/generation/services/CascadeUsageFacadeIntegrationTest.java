@@ -24,7 +24,7 @@ class CascadeUsageFacadeIntegrationTest {
         Files.copy(Path.of(Objects.requireNonNull(
                 getClass().getResource("/com-example.xml")).toURI()), root.resolve("com.xml"));
 
-        cascadeUsageFacade.process(root, false);
+        cascadeUsageFacade.process(root, false, false);
 
         int labCount = 2;
         int generatedFilesPerFolder = 3;
@@ -43,7 +43,7 @@ class CascadeUsageFacadeIntegrationTest {
         Files.copy(Path.of(Objects.requireNonNull(
                 getClass().getResource("/com-example.xml")).toURI()), root.resolve("com.xml"));
 
-        cascadeUsageFacade.process(root, true);
+        cascadeUsageFacade.process(root, true, false);
 
         int labCount = 2;
 

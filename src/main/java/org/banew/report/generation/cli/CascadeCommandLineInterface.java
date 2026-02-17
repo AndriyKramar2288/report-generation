@@ -27,6 +27,9 @@ public class CascadeCommandLineInterface implements Runnable {
     @CommandLine.Option(names = {"-b", "--build"}, description = "Почати побудову звітів після створення усіх файлів")
     private boolean isBuild;
 
+    @CommandLine.Option(names = {"-same", "--sameDirectory"}, description = "Будувати всьо прям зразу в одній теці")
+    private boolean isSameDirectory;
+
     private final CascadeUsageFacade cascadeUsageFacade;
 
     @Override
@@ -36,7 +39,7 @@ public class CascadeCommandLineInterface implements Runnable {
             if (!comPath.exists() || comPath.isDirectory() || !comPath.canRead() || !comPath.getName().endsWith(".xml")) {
                 cascadeUsageFacade.givePrompt(context);
             } else {
-                cascadeUsageFacade.process(context, isBuild);
+                cascadeUsageFacade.process(context, isBuild, isSameDirectory);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
