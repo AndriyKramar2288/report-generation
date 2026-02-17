@@ -166,6 +166,15 @@ public class ShellInteractiveRunner {
             log.debug("Доїдаєм залишки логів перед смертю шелла...");
             while ((line = reader.readLine()) != null) {
                 log.debug("Прилетіло \"на коня\": '{}'", line);
+
+                if (line.contains("echo " + uniqueMarker)
+                        || line.contains(uniqueMarker)
+                        || line.contains("echo ERROR_LEVEL:")
+                        || line.contains("ERROR_LEVEL:")
+                        || line.contains("exit")
+                        || line.trim().isEmpty()) {
+                    continue;
+                }
                 finalLog.append(line).append("\n");
             }
 
