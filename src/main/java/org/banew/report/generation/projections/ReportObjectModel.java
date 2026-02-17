@@ -23,6 +23,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.Charset;
+import java.nio.charset.MalformedInputException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -61,7 +64,7 @@ public class ReportObjectModel {
         log.debug("Блядь, пробуєм роздуплити цей файл: {}", romSource);
         try {
             log.debug("Читаєм цю хуйню з діска, надійся, шо там не пусто");
-            String content = Files.readString(Paths.get(romSource));
+            String content = Files.readString(Paths.get(romSource), StandardCharsets.UTF_8);
 
             log.debug("Настраюєм цей йобаний Flexmark, шоб він схавав наш YAML");
             MutableDataSet options = new MutableDataSet();
@@ -86,9 +89,18 @@ public class ReportObjectModel {
                     var files = resolveFiles(contextPath, pattern);
                     files.forEach(file -> {
                         try {
-                            obj.getCodeFileNameToContentMap()
-                                    .put(file.toFile().getName(), Files.readString(file));
+                            String codeContent;
+                            try {
+                                codeContent = Files.readString(file, StandardCharsets.UTF_8);
+                            } catch (MalformedInputException e) {
+                                log.warn("Файл {} не в UTF-8! Пробуємо витягнути через Windows-1251...", file.getFileName());
+                                codeContent = Files.readString(file, Charset.forName("windows-1251"));
+                            }
+
+                            obj.getCodeFileNameToContentMap().put(file.toFile().getName(), codeContent);
+
                         } catch (IOException e) {
+                            log.error("Не змогли прочитати файл коду {}: {}", file, e.getMessage());
                             throw new RuntimeException(e);
                         }
                     });
@@ -127,6 +139,7 @@ public class ReportObjectModel {
         try (Stream<Path> stream = Files.walk(rootPath)) {
             return stream
                     .filter(path -> !Files.isDirectory(path))
+                    .filter(path -> !path.toString().endsWith(".class"))
                     .filter(path -> {
                         Path relativePath = rootPath.relativize(path);
                         return matcher.matches(relativePath);

@@ -76,6 +76,7 @@ public class DocxImagesService {
 
                                 try (FileInputStream is = new FileInputStream(entry.getValue())) {
                                     log.debug("Вставляєм картинку і підписуєм, шо це рис. {}", imageIndex + 1);
+                                    run.addBreak();
                                     run.addPicture(is, XWPFDocument.PICTURE_TYPE_PNG,
                                             entry.getValue().getName(), Units.toEMU(350),
                                             Units.toEMU(computeImageHeightByWidth(entry.getValue(), 350)));

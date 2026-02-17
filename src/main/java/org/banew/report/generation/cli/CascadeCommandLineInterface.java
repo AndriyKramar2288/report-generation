@@ -32,7 +32,7 @@ public class CascadeCommandLineInterface implements Runnable {
     @Override
     public void run() {
         try {
-            Path context = comPath.getParentFile().toPath();
+            Path context = comPath.getAbsoluteFile().getParentFile().toPath();
             if (!comPath.exists() || comPath.isDirectory() || !comPath.canRead() || !comPath.getName().endsWith(".xml")) {
                 cascadeUsageFacade.givePrompt(context);
             } else {
