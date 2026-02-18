@@ -31,6 +31,8 @@ public class ShellInteractiveRunner {
 
     private static final Logger log = LoggerFactory.getLogger(ShellInteractiveRunner.class);
 
+    private static final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase().contains("win");
+
     /**
      * Запускає сесію cmd.exe та послідовно виконує список команд.
      * <p>
@@ -47,7 +49,8 @@ public class ShellInteractiveRunner {
      */
     public String runAllInOneSession(Path context, List<? extends BashRun> runs, boolean hide) throws IOException {
         log.debug("Сука, заводим цю колимагу cmd.exe, шоб вона всралась");
-        ProcessBuilder pb = new ProcessBuilder("cmd.exe");
+        String shellCmd = IS_WINDOWS ? "cmd.exe" : "zsh";
+        ProcessBuilder pb = new ProcessBuilder(shellCmd);
         pb.environment().put("PYTHONIOENCODING", "utf-8");
         pb.environment().put("LANG", "en_US.UTF-8");
         pb.directory(context.toFile());
@@ -58,7 +61,7 @@ public class ShellInteractiveRunner {
             StringBuilder finalLog = new StringBuilder();
 
             Thread terminator = null;
-            if (hide) {
+            if (hide && IS_WINDOWS) {
                 log.debug("Визиваєм кіллера-термінатора, хай пиздячить вікна нахуй");
                 terminator = new Terminator(shell);
                 terminator.start();
@@ -97,7 +100,8 @@ public class ShellInteractiveRunner {
                 }
 
                 log.debug("Швиряєм маркер, шоб знати, де ця параша кінчається");
-                writer.write("echo ERROR_LEVEL:%ERRORLEVEL%\n");
+                String errorLevelCmd = IS_WINDOWS ? "echo ERROR_LEVEL:%ERRORLEVEL%" : "echo ERROR_LEVEL:$?";
+                writer.write(errorLevelCmd + "\n");
                 writer.write("echo " + uniqueMarker + "\n");
                 writer.flush();
 

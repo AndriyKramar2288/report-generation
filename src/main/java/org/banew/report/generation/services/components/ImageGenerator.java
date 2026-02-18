@@ -12,6 +12,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -25,6 +27,8 @@ public class ImageGenerator {
     private static final Logger log = LoggerFactory.getLogger(ImageGenerator.class);
     private final PropertiesSource propertiesSource;
 
+    private static final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase().contains("win");
+
     /**
      * Генерує файл зображення з вмістом деякого файлу
      * @param inputPath абсолютний шлях до будь-якого текстового файлу
@@ -37,11 +41,18 @@ public class ImageGenerator {
         log.debug("Робоча каморка для npm: {}", propertiesSource.getNpmDir().getAbsolutePath());
 
         log.debug("Запрягаєм npx carbon-now. Хай ця паскуда малює нам красу через headless-браузер");
-        ProcessBuilder pb = new ProcessBuilder(
-                "cmd.exe", "/c", "npx", "carbon-now",
-                Objects.requireNonNull(inputPath),
-                "--headless"
-        );
+
+        List<String> command = new ArrayList<>();
+        if (IS_WINDOWS) {
+            command.add("cmd.exe");
+            command.add("/c");
+        }
+        command.add("npx");
+        command.add("carbon-now");
+        command.add(Objects.requireNonNull(inputPath));
+        command.add("--headless");
+
+        ProcessBuilder pb = new ProcessBuilder(command);
 
         log.debug("Наслєдуєм IO, шоб бачити в консолі, як ця сука мучиться");
         pb.directory(propertiesSource.getNpmDir());
