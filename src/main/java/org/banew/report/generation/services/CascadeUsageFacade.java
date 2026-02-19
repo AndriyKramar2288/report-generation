@@ -62,7 +62,8 @@ public class CascadeUsageFacade {
             Files.writeString(labRoot.resolve(romFileName), lab.getReport(), StandardCharsets.UTF_8);
         }
 
-        ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        ExecutorService executor = Executors.newFixedThreadPool(
+                isSameDirectory ? 1 : Runtime.getRuntime().availableProcessors());
 
         if (isBuild) {
             log.debug("Початок побудови звітів");

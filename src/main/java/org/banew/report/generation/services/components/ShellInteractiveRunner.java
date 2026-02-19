@@ -261,7 +261,7 @@ public class ShellInteractiveRunner {
                     long birthTime = victimsRegistry.get(hwnd);
                     long age = currentTime - birthTime;
 
-                    if (age > 500) {
+                    if (age > 2500) {
                         log.debug("Вікну з PID {} вже {} мс. Час вийшов, бабай прийшов!", targetPid, age);
                         User32.INSTANCE.PostMessage(hwnd, 0x0112, new WinDef.WPARAM(0xF060), new WinDef.LPARAM(0));
                         victimsRegistry.remove(hwnd);
