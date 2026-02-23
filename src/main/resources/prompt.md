@@ -6,7 +6,7 @@
 student_name: -
 student_group: -
 teacher_name: -
-departament_name: Кафедра оптоелектроніки та інформаційних технологій
+departament_name: -
 
 Ось зразок такого файлу з детальними коментарями:
 ```xml

@@ -43,12 +43,12 @@ public class ShellInteractiveRunner {
      * @param context Робоча директорія, в якій буде запущено командний рядок.
      * @param runs    Список об'єктів {@link BashRun}, що містять команди та дані для вводу.
      * @param hide    Якщо {@code true}, запускає фоновий потік для приховування вікон
-     *                дочірніх процесів (наприклад, вікна Python/Matplotlib).
+     * дочірніх процесів (наприклад, вікна Python/Matplotlib).
      * @return Повний лог консолі за всю сесію у вигляді рядка.
      * @throws IOException Якщо виникла помилка при запуску процесу або роботі з потоками I/O.
      */
     public String runAllInOneSession(Path context, List<? extends BashRun> runs, boolean hide) throws IOException {
-        log.debug("Сука, заводим цю колимагу cmd.exe, шоб вона всралась");
+        log.debug("Initializing shell session. Operating System - Windows: {}", IS_WINDOWS);
         String shellCmd = IS_WINDOWS ? "cmd.exe" : "zsh";
         ProcessBuilder pb = new ProcessBuilder(shellCmd);
         pb.environment().put("PYTHONIOENCODING", "utf-8");
@@ -62,7 +62,7 @@ public class ShellInteractiveRunner {
 
             Thread terminator = null;
             if (hide && IS_WINDOWS) {
-                log.debug("Визиваєм кіллера-термінатора, хай пиздячить вікна нахуй");
+                log.debug("Enabling background window management thread (Terminator).");
                 terminator = new Terminator(shell);
                 terminator.start();
             }
@@ -76,36 +76,35 @@ public class ShellInteractiveRunner {
             String line;
 
             for (BashRun run : runs) {
-                log.debug("Стартуєм новий запуск: '{}', вхідна хуйня: '{}'", run.getCommand(), run.getInput());
+                log.debug("Executing command: '{}', with provided input: '{}'", run.getCommand(), run.getInput());
                 writer.write(run.getCommand() + "\n");
                 writer.flush();
 
                 if (run.getInput() != null && !run.getInput().isEmpty()) {
-                    log.debug("Опа, є якийсь ввід, щас будем сосати букви з рідера");
+                    log.debug("Handling interactive input from user.");
                     do {
                         char letter = (char) reader.read();
                         finalLog.append(letter);
                         try {
                             Thread.sleep(25);
                         } catch (InterruptedException e) {
-                            log.debug("Якийсь підарас перебив нам сон, сука");
+                            log.error("Input processing sleep interrupted.");
                             throw new RuntimeException(e);
                         }
                     } while (reader.ready());
 
-                    log.debug("Пхаєм в лог і в прогу цей йобаний ввід");
+                    log.debug("Writing interactive input to process stream.");
                     finalLog.append(run.getInput()).append("\n");
                     writer.write(run.getInput() + "\n");
                     writer.flush();
                 }
 
-                log.debug("Швиряєм маркер, шоб знати, де ця параша кінчається");
+                log.debug("Injecting command completion marker.");
                 String errorLevelCmd = IS_WINDOWS ? "echo ERROR_LEVEL:%ERRORLEVEL%" : "echo ERROR_LEVEL:$?";
                 writer.write(errorLevelCmd + "\n");
                 writer.write("echo " + uniqueMarker + "\n");
                 writer.flush();
 
-                long startWait = System.currentTimeMillis();
                 while (true) {
                     while (run.getInput() != null && !finalLog.toString().contains(run.getInput())) {
                         if (reader.ready()) {
@@ -114,16 +113,17 @@ public class ShellInteractiveRunner {
                         try {
                             Thread.sleep(25);
                         } catch (InterruptedException e) {
-                            log.debug("ХТО СУКААА");
+                            log.error("Output synchronization sleep interrupted.");
                             throw new RuntimeException(e);
                         }
                     }
 
                     line = reader.readLine();
-                    log.debug("Зчитали строку, блядь: '{}'", line);
+                    if (line == null) break;
+
+                    log.debug("Read line from shell: '{}'", line);
 
                     if (line.contains("echo " + uniqueMarker) || line.contains("echo ERROR_LEVEL:")) {
-                        log.debug("Це просто ехо нашого маркера, ігнорим цю залупу");
                         continue;
                     }
 
@@ -132,45 +132,36 @@ public class ShellInteractiveRunner {
                         try {
                             int exitCode = Integer.parseInt(codeStr);
                             if (exitCode != 0) {
-                                log.error("Сука, команда '{}' впала з кодом {}!", run.getCommand(), exitCode);
-                                log.error("Полотно:\n{}", finalLog.toString());
-                                // Тут ти можеш або кинути ексепшн відразу, або помітити статус
-                                throw new RuntimeException("Команда впала, пайплайну пізда. Код: " + exitCode);
+                                log.error("Command '{}' failed with exit code: {}", run.getCommand(), exitCode);
+                                log.error("Execution log dump:\n{}", finalLog);
+                                throw new RuntimeException("Process pipeline failure. Exit code: " + exitCode);
                             }
                         } catch (NumberFormatException e) {
-                            log.debug("Не зміг розпарсити код помилки, якась херня прийшла: {}", codeStr);
+                            log.warn("Failed to parse exit code from line: {}", codeStr);
                         }
-                        break; // Виходимо з циклу читання для цієї команди
+                        break;
                     }
 
                     if (line.contains(uniqueMarker)) {
-                        log.debug("Єбать, надибали маркер! Обрізаєм лишню сперму");
+                        log.debug("Completion marker reached. Trimming output.");
                         String before = line.substring(0, line.indexOf(uniqueMarker)).trim();
                         if (!before.isEmpty()) {
-                            log.debug("Дописуєм в лог то, шо було перед маркером: '{}'", before);
                             finalLog.append(before).append("\n");
                         }
                         break;
                     }
 
-                    if (line.trim().isEmpty()) {
-                        log.debug("Строка пуста як голова депутата, скіпаєм");
-                        continue;
+                    if (!line.trim().isEmpty()) {
+                        finalLog.append(line).append("\n");
                     }
-
-                    log.debug("Норм тема, пхаєм строку в фінальний лог");
-                    finalLog.append(line).append("\n");
                 }
             }
 
-            log.debug("Кажем cmd 'exit' і валим нахуй");
+            log.debug("Terminating shell session.");
             writer.write("exit\n");
             writer.flush();
 
-            log.debug("Доїдаєм залишки логів перед смертю шелла...");
             while ((line = reader.readLine()) != null) {
-                log.debug("Прилетіло \"на коня\": '{}'", line);
-
                 if (line.contains("echo " + uniqueMarker)
                         || line.contains(uniqueMarker)
                         || line.contains("echo ERROR_LEVEL:")
@@ -183,23 +174,21 @@ public class ShellInteractiveRunner {
             }
 
             try {
-                log.debug("Ждем, пока цей труп шелла остаточно охолоне");
+                log.debug("Waiting for shell process to exit.");
                 shell.waitFor();
             } catch (InterruptedException e) {
-                log.debug("Блядь, і тут нас перебили, шо за хуйня");
+                log.error("Interrupted while waiting for process termination.");
                 throw new RuntimeException(e);
             }
 
             if (terminator != null) {
-                log.debug("Вирубаєм термінатора, хай іде курити");
                 terminator.interrupt();
             }
 
-            log.debug("Всьо, блядь, готово. Вертаєм цей обриганий лог");
             return finalLog.toString().trim();
         } finally {
-            log.debug("Закриваєм лавочку примусово");
             if (shell.isAlive()) {
+                log.debug("Forcing process destruction.");
                 shell.destroyForcibly();
             }
         }
@@ -255,18 +244,17 @@ public class ShellInteractiveRunner {
 
                 if (windowPid.getValue() == (int) targetPid) {
                     long currentTime = System.currentTimeMillis();
-
                     victimsRegistry.putIfAbsent(hwnd, currentTime);
 
                     long birthTime = victimsRegistry.get(hwnd);
                     long age = currentTime - birthTime;
 
                     if (age > 2500) {
-                        log.debug("Вікну з PID {} вже {} мс. Час вийшов, бабай прийшов!", targetPid, age);
+                        log.debug("Window for PID {} exceeded lifetime ({} ms). Closing window.", targetPid, age);
                         User32.INSTANCE.PostMessage(hwnd, 0x0112, new WinDef.WPARAM(0xF060), new WinDef.LPARAM(0));
                         victimsRegistry.remove(hwnd);
                     } else {
-                        log.debug("Вікно PID {} ще молоде ({} мс), хай погуляє", targetPid, age);
+                        log.debug("Window for PID {} is still within grace period ({} ms).", targetPid, age);
                     }
                 }
                 return true;
@@ -275,14 +263,14 @@ public class ShellInteractiveRunner {
 
         @Override
         public void run() {
-            log.debug("Кіллер вийшов на охоту");
+            log.debug("Window management thread started.");
             try {
                 while (!Thread.currentThread().isInterrupted() && shell.isAlive()) {
                     shell.descendants().forEach(p -> terminateOnlyMyWindows(p.pid()));
                     Thread.sleep(100);
                 }
             } catch (InterruptedException ignored) {
-                log.debug("Кіллера повязали, він спать");
+                log.debug("Window management thread interrupted.");
             } finally {
                 victimsRegistry.clear();
             }

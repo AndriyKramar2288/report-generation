@@ -10,6 +10,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Set;
 
+/**
+ * Сервіс для валідації об'єктних моделей звітів та курсів.
+ * Використовує Jakarta Validation для перевірки обмежень, заданих анотаціями.
+ */
 @Singleton
 @RequiredArgsConstructor(onConstructor_ = @Inject)
 public class ProjectionValidator {
@@ -17,21 +21,28 @@ public class ProjectionValidator {
     private static final Logger log = LoggerFactory.getLogger(ProjectionValidator.class);
     private final Validator validator;
 
+    /**
+     * Виконує повну валідацію переданого об'єкта.
+     * * @param obj Об'єкт для перевірки.
+     * @param <T> Тип об'єкта.
+     * @throws RuntimeException у разі виявлення порушень обмежень.
+     */
     public <T> void validate(T obj) {
+        log.debug("Starting object validation for type: {}", obj.getClass().getSimpleName());
         Set<ConstraintViolation<T>> violations = validator.validate(obj);
 
         if (!violations.isEmpty()) {
-            log.error("Упс! Твоя штука — це якась люта діч. Знайдено помилок: {}", violations.size());
+            log.error("Validation failed. Found {} constraint violation(s).", violations.size());
 
             for (ConstraintViolation<T> violation : violations) {
-                log.error("Помилка у полі '{}': {}",
+                log.error("Violation in field '{}': {}",
                         violation.getPropertyPath(),
                         violation.getMessage());
             }
 
-            throw new RuntimeException("Валідація не пройдена. Виправляй XML!");
+            throw new RuntimeException("Validation failed. Please check the input data and structure!");
         }
 
-        log.info("XML успішно пройшов цензуру. Починаємо працювати!");
+        log.info("Validation successful. Object model conforms to the required constraints.");
     }
 }

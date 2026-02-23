@@ -61,30 +61,31 @@ public class ReportObjectModel {
     }
 
     public static ReportObjectModel create(URI romSource, Path contextPath) {
-        log.debug("Блядь, пробуєм роздуплити цей файл: {}", romSource);
+        log.debug("Attempting to initialize ReportObjectModel from source: {}", romSource);
         try {
-            log.debug("Читаєм цю хуйню з діска, надійся, шо там не пусто");
+            log.debug("Reading source file content from disk...");
             String content = Files.readString(Paths.get(romSource), StandardCharsets.UTF_8);
 
-            log.debug("Настраюєм цей йобаний Flexmark, шоб він схавав наш YAML");
+            log.debug("Configuring Flexmark parser with YAML Front Matter extension.");
             MutableDataSet options = new MutableDataSet();
             options.set(Parser.EXTENSIONS, Collections.singletonList(YamlFrontMatterExtension.create()));
             Parser parser = Parser.builder(options).build();
             HtmlRenderer renderer = HtmlRenderer.builder(options).build();
 
-            log.debug("Парсим цю залупу, щас буде видно, хто де насрав");
+            log.debug("Parsing document structure...");
             Node document = parser.parse(content);
             Node metadataBlock = document.getFirstChild();
 
             if (metadataBlock instanceof YamlFrontMatterBlock) {
-                log.debug("Опа, надибали метадані! Видирай цей YAML нахуй");
+                log.debug("Metadata block identified. Extracting YAML content.");
                 String yamlText = metadataBlock.getChars().toString();
 
-                log.debug("Запрягаєм Jackson, хай мапить цей брєд на об'єкт");
+                log.debug("Initializing Jackson YAML mapper for object mapping.");
                 ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
 
                 var obj = mapper.readValue(yamlText, ReportObjectModel.class);
 
+                log.debug("Resolving source code files based on defined patterns.");
                 obj.getCodes().forEach(pattern -> {
                     var files = resolveFiles(contextPath, pattern);
                     files.forEach(file -> {
@@ -93,47 +94,46 @@ public class ReportObjectModel {
                             try {
                                 codeContent = Files.readString(file, StandardCharsets.UTF_8);
                             } catch (MalformedInputException e) {
-                                log.warn("Файл {} не в UTF-8! Пробуємо витягнути через Windows-1251...", file.getFileName());
+                                log.warn("File {} is not UTF-8 encoded. Attempting fallback to Windows-1251.", file.getFileName());
                                 codeContent = Files.readString(file, Charset.forName("windows-1251"));
                             }
 
                             obj.getCodeFileNameToContentMap().put(file.toFile().getName(), codeContent);
 
                         } catch (IOException e) {
-                            log.error("Не змогли прочитати файл коду {}: {}", file, e.getMessage());
+                            log.error("Failed to read source code file {}: {}", file, e.getMessage());
                             throw new RuntimeException(e);
                         }
                     });
                 });
 
-                log.debug("Рендерим остальну парашу в HTML, шоб було красиво, блядь");
+                log.debug("Rendering Markdown body to HTML format.");
                 String htmlContent = renderer.render(
                         parser.parse(content.substring(metadataBlock.getEndOffset()).trim()));
 
                 obj.setContent(htmlContent);
 
-                log.debug("Дописуєм рік, бо цей підарас сам не знає, яке сьогодні число");
+                log.debug("Injecting current year into report properties.");
                 obj.getProperties().put("year", LocalDateTime.now().getYear() + "");
 
-                log.debug("Всьо, об'єкт зліпили, не розсипався — і то заєбісь");
+                log.info("ReportObjectModel successfully built and validated.");
                 return obj;
             } else {
-                log.debug("Сука, де метадані? Ти шо, здурів, таку парашу підсовувать?");
+                log.error("Metadata block missing. Ensure the file starts with YAML front matter (---).");
             }
         } catch (JacksonException jacksonException) {
-            log.debug("Всьо, пізда, Джексон подавився твоїм YAML-ом: {}", jacksonException.getMessage());
-            throw new RuntimeException("failed to parse note.md", jacksonException);
+            log.error("YAML parsing failed: {}", jacksonException.getMessage());
+            throw new RuntimeException("Failed to parse YAML front matter in note.md", jacksonException);
         } catch (IOException ioException) {
-            log.debug("Якийсь гондон забрав файл або диск вмер: {}", ioException.getMessage());
-            throw new RuntimeException("failed to read file", ioException);
+            log.error("IO error occurred during file processing: {}", ioException.getMessage());
+            throw new RuntimeException("Failed to read report source file", ioException);
         }
 
-        log.debug("Вертаєм null, бо ми рукожопи і нічо не знайшли");
+        log.warn("Report creation failed. Returning null.");
         return null;
     }
 
     private static List<Path> resolveFiles(Path rootPath, String pattern) {
-
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
 
         try (Stream<Path> stream = Files.walk(rootPath)) {
@@ -147,6 +147,7 @@ public class ReportObjectModel {
                     .collect(Collectors.toList());
         }
         catch (IOException e) {
+            log.error("Error walking file tree for pattern: {}", pattern);
             throw new RuntimeException(e);
         }
     }

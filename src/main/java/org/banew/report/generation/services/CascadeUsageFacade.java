@@ -37,10 +37,10 @@ public class CascadeUsageFacade {
     public void process(Path root, boolean isBuild, boolean isSameDirectory) throws JAXBException, IOException {
         CourseObjectModel cos = xmlService.unmashallCourseObjectModel(root.resolve("com.xml").toFile());
         projectionValidator.validate(cos);
-        log.debug("Об'єкта модель курсу сформована");
+        log.debug("Course object model successfully formed");
 
         for (int i = 1; i <= cos.getLabs().size(); i++) {
-            log.debug("Початок обробки лабки №{}", i);
+            log.debug("Starting processing of laboratory work #{}", i);
             var lab = cos.getLabs().get(i - 1);
             Path labRoot = isSameDirectory ? root : root.resolve("lab-" + i);
             String romFileName = isSameDirectory ? "rom" + i + ".md" : "rom.md";
@@ -48,17 +48,17 @@ public class CascadeUsageFacade {
             Files.createDirectories(labRoot);
 
             if (!lab.getShellCommands().isEmpty()) {
-                log.debug("Запуск скриптів ({} штуки) за директорією {}", lab.getShellCommands().size(), labRoot);
+                log.debug("Executing shell commands (count: {}) in directory: {}", lab.getShellCommands().size(), labRoot);
                 var shellResult = shellInteractiveRunner.runAllInOneSession(labRoot, lab.getShellCommands(), true);
-                log.debug("Результат виконання скрипта: {}", shellResult);
+                log.debug("Shell execution result: {}", shellResult);
             }
 
             for (LabModel.LabFile file : lab.getFiles()) {
                 createFileWithDirs(labRoot.resolve(file.getName()), file.getContent());
-                log.debug("Створено файл {}", file.getName());
+                log.debug("File created: {}", file.getName());
             }
 
-            log.debug("Створення файлу об'єктної моделі лабки");
+            log.debug("Creating laboratory work object model file");
             Files.writeString(labRoot.resolve(romFileName), lab.getReport(), StandardCharsets.UTF_8);
         }
 
@@ -66,7 +66,7 @@ public class CascadeUsageFacade {
                 isSameDirectory ? 1 : Runtime.getRuntime().availableProcessors());
 
         if (isBuild) {
-            log.debug("Початок побудови звітів");
+            log.debug("Starting report generation process");
             for (int i = 1; i <= cos.getLabs().size(); i++) {
 
                 int finalI = i;
@@ -74,11 +74,11 @@ public class CascadeUsageFacade {
                 String romFileName = isSameDirectory ? "rom" + i + ".md" : "rom.md";
 
                 executor.submit(() -> {
-                    log.debug("Початок побудови звіту №{}", finalI);
+                    log.debug("Generating report #{}", finalI);
                     try {
                         var rom = ReportObjectModel.create(labRoot.resolve(romFileName).toUri(), labRoot);
                         projectionValidator.validate(rom);
-                        log.debug("Об'єктна модель звіту №{} побудована, переходимо до побудови файлу", finalI);
+                        log.debug("Report object model #{} formed, proceeding to file generation", finalI);
                         reportGenerationFacade.generate(Objects.requireNonNull(rom),
                                 getClass().getResourceAsStream("/template.docx"),
                                 "report-" + finalI,
@@ -87,7 +87,7 @@ public class CascadeUsageFacade {
                                 true);
                     }
                     catch (Exception e) {
-                        log.error("Побудова звіту №{} провалилась! Помилка: {}",
+                        log.error("Report generation #{} failed. Error: {}",
                                 finalI, e.getMessage());
                     }
                 });
@@ -95,39 +95,39 @@ public class CascadeUsageFacade {
         }
 
         executor.shutdown();
-        log.info("Чекаємо на завершення формування всіх звітів...");
+        log.info("Awaiting termination of all generation tasks...");
         try {
             if (!executor.awaitTermination(10, java.util.concurrent.TimeUnit.MINUTES)) {
-                log.error("Час вийшов, а звіти так і не добудувалися. Якась содомія...");
+                log.error("Timeout reached. Some reports were not generated.");
                 executor.shutdownNow();
             }
         } catch (InterruptedException e) {
+            log.error("Execution interrupted", e);
             executor.shutdownNow();
             Thread.currentThread().interrupt();
         }
     }
 
     public void givePrompt(Path root) {
+        log.debug("Copying default prompt.md to com.xml in: {}", root);
         try (InputStream promptInput = this.getClass().getResourceAsStream("/prompt.md")) {
             if (promptInput != null) {
                 Files.copy(promptInput, root.resolve("com.xml"));
                 xmlService.generateSchema(root);
             }
         } catch (IOException e) {
+            log.error("Failed to copy prompt template", e);
             throw new RuntimeException(e);
         }
     }
 
     private void createFileWithDirs(Path filePath, String content) throws IOException {
-
         Path parentDir = filePath.getParent();
-
         if (parentDir != null && Files.notExists(parentDir)) {
-            log.info("Створюємо відсутні директорії: {}", parentDir);
+            log.info("Creating missing directories: {}", parentDir);
             Files.createDirectories(parentDir);
         }
-
         Files.writeString(filePath, content, StandardCharsets.UTF_8);
-        log.info("Файл успішно створено за шляхом: {}", filePath);
+        log.info("File successfully created at: {}", filePath);
     }
 }

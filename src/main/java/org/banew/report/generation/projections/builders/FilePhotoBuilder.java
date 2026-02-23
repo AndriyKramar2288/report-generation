@@ -25,18 +25,21 @@ public class FilePhotoBuilder extends TextContainingPhotoBuilder {
     @NotBlank(message = "Слід обов'язково вказати назву файлу!")
     private String name;
 
+    /**
+     * Виконує рекурсивний пошук файлу за назвою в заданій директорії.
+     */
     private static File findFileContent(String fileName, Path root) {
-        log.debug("Так, блядь, починаєм шмон у теці: {}", root);
-        log.debug("Шукаєм оцю залупу під назвою: '{}'", fileName);
+        log.debug("Initiating file search in directory: {}", root);
+        log.debug("Target file name: '{}'", fileName);
 
         try (Stream<Path> stream = Files.walk(root)) {
-            log.debug("Запустили стрім, щас будемо перебирати цей весь хлам на діску");
+            log.debug("Stream initialized, scanning file tree for matches...");
 
             Optional<Path> foundFile = stream
                     .filter(path -> {
                         boolean isFile = Files.isRegularFile(path);
                         if (!isFile) {
-                            log.debug("Пропускаєм цю парашу, це не файл: {}", path.getFileName());
+                            log.debug("Skipping non-regular file/directory: {}", path.getFileName());
                         }
                         return isFile;
                     })
@@ -44,28 +47,28 @@ public class FilePhotoBuilder extends TextContainingPhotoBuilder {
                         String currentName = path.getFileName().toString();
                         boolean match = currentName.equals(fileName);
                         if (match) {
-                            log.debug("ЄБАТЬ! Надибали! Ось він, сука: {}", path.toAbsolutePath());
+                            log.info("File match found: {}", path.toAbsolutePath());
                         }
                         return match;
                     })
                     .findFirst();
 
             if (foundFile.isPresent()) {
-                log.debug("Всьо, капець пошукам, файл у нас в кармані. Тягнем його на білд");
+                log.debug("Search completed. File is ready for further processing.");
                 return foundFile.get().toFile();
             } else {
-                log.debug("Пізда рулю... Обійшли всьо, а файла '{}' ніхуя нема в '{}'. Ти шо, гоніш?", fileName, root);
+                log.warn("Search finished. File '{}' not found in context '{}'.", fileName, root);
                 return null;
             }
         } catch (IOException e) {
-            log.debug("Якась йобана помилка вилізла, поки ми рились у смітнику: {}", e.getMessage());
-            throw new RuntimeException("Помилка при пошуку файлу: " + fileName, e);
+            log.error("IO error occurred during file system traversal: {}", e.getMessage());
+            throw new RuntimeException("Error searching for file: " + fileName, e);
         }
     }
 
     @Override
     protected File buildTextFile(Path contextPath) throws IOException {
-        log.debug("Визиваєм пошук файла '{}' через контекст '{}', блядь", name, contextPath);
+        log.debug("Requesting file build for '{}' using context: {}", name, contextPath);
         return findFileContent(name, contextPath);
     }
 }

@@ -50,7 +50,6 @@ public class DocxModifierService {
      * @throws IOException При помилках сканування файлової системи.
      */
     public List<Path> resolveFiles(Path rootPath, String pattern) throws IOException {
-
         final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
 
         try (Stream<Path> stream = Files.walk(rootPath)) {
@@ -70,14 +69,14 @@ public class DocxModifierService {
      * @throws Exception Якщо конвертер не знайдено або сталася помилка конвертації.
      */
     public byte[] convertDocxToPdf(byte[] data) throws Exception {
-        log.debug("Починаєм магічне перетворення гівна в PDF");
+        log.debug("Starting DOCX to PDF conversion process.");
         try (InputStream in = new ByteArrayInputStream(data);
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
             Options options = Options.getFrom(DocumentKind.DOCX).to(ConverterTypeTo.PDF);
             IConverter converter = ConverterRegistry.getRegistry().getConverter(options);
 
-            log.debug("Конвертер каже: 'Я зроблю це, але мені гидко'");
+            log.debug("IConverter instance retrieved from registry. Executing conversion...");
             converter.convert(in, out, options);
 
             return out.toByteArray();
@@ -94,7 +93,7 @@ public class DocxModifierService {
      * @throws XDocReportException При помилках обробки Velocity шаблону.
      */
     public byte[] loadTemplateChanges(byte[] data, ReportObjectModel model) throws IOException, XDocReportException {
-        log.debug("Запускаєм XDocReport і Velocity, хай міняють змінні на реальне гівно");
+        log.debug("Initializing XDocReport with Velocity engine for template processing.");
         try (InputStream templateStream = new ByteArrayInputStream(data)) {
             IXDocReport report = XDocReportRegistry.getRegistry()
                     .loadReport(templateStream, TemplateEngineKind.Velocity);
@@ -106,8 +105,9 @@ public class DocxModifierService {
             IContext context = report.createContext();
             context.put("content", model.getContent());
             context.put("codeMap", model.getCodeFileNameToContentMap());
+
             model.getProperties().forEach((k, v) -> {
-                log.debug("Пхаєм в контекст: {} = {}", k, v);
+                log.debug("Injecting property to context: {} = {}", k, v);
                 context.put(k, v);
             });
 
@@ -126,7 +126,7 @@ public class DocxModifierService {
      * @throws IOException При помилках маніпуляції з XML структурою DOCX.
      */
     public byte[] loadCorrectField(byte[] data) throws IOException {
-        log.debug("Маніпулюєм XML-курсором, шоб вставити MERGEFIELD. Чиста содомія!");
+        log.debug("Executing low-level XML cursor manipulation to inject MERGEFIELD.");
         XWPFDocument doc;
         try (InputStream is = new ByteArrayInputStream(data)) {
             doc = new XWPFDocument(Objects.requireNonNull(is));
@@ -134,7 +134,7 @@ public class DocxModifierService {
 
         for (XWPFParagraph p : doc.getParagraphs()) {
             if (p.getText().contains("${content}")) {
-                log.debug("Надибали плейсхолдер контента, щас будем його роздирати");
+                log.debug("Content placeholder detected. Restructuring paragraph runs.");
                 for (int i = p.getRuns().size() - 1; i >= 0; i--) p.removeRun(i);
 
                 XmlCursor cursor = p.getCTP().newCursor();

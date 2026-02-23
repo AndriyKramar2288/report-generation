@@ -17,6 +17,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+/**
+ * Основний командний інтерфейс для генерації одиничних звітів.
+ * Забезпечує валідацію вхідних параметрів та запуск процесу побудови документа.
+ */
 @CommandLine.Command(
         description = "Побудувати фінальний DOCX на основі наданого MD-файлу",
         subcommands = CascadeCommandLineInterface.class
@@ -26,6 +30,7 @@ import java.nio.file.Paths;
 public class BasicCommandLineInterface implements Runnable {
 
     private static final Logger log = LoggerFactory.getLogger(BasicCommandLineInterface.class);
+
     @CommandLine.Option(names = {"-ctx", "--contextPath"},
             description = "Тека, що задає контекст для побудови звітів")
     private Path contextPath = Paths.get(System.getProperty("user.dir"));
@@ -37,24 +42,24 @@ public class BasicCommandLineInterface implements Runnable {
     @CommandLine.Option(names = {"-i", "--inputReportMd"},
             description = "Назва вхідного звіту MD")
     private void setInputReportMd(File inputReportMd) throws IOException {
-        log.debug("Провіряєм, яку хуйню нам підсунули як вхідний MD: {}", inputReportMd);
+        log.debug("Validating input Markdown file: {}", inputReportMd);
+
         if (!inputReportMd.exists()) {
-            log.debug("Пізда, файла {} нема, юзер — гавнюк", inputReportMd);
+            log.error("Input file not found: {}", inputReportMd);
             throw new CommandLine.ParameterException(
-                    new CommandLine(this), "Гавнюк, файла " + inputReportMd + " не існує!");
+                    new CommandLine(this), "Input file " + inputReportMd + " does not exist.");
         }
 
-        log.debug("Читаєм перші байти, шоб поняти, чи це реально MD з фронт-маттером");
+        log.debug("Checking file header and extension for Markdown compatibility.");
         String text = Files.readString(inputReportMd.toPath()).trim();
         if (!text.startsWith("---") || !inputReportMd.getName().endsWith(".md")) {
-            log.debug("Шо це за параша? {} — це не MD і там нема потрібних приколів!", inputReportMd.getName());
+            log.error("Invalid file format. File {} lacks YAML front matter or correct extension.", inputReportMd.getName());
             throw new CommandLine.ParameterException(
-                    new CommandLine(this), "Гавнюк, файл " + inputReportMd + " не є MD і не має потрібних приколів!");
+                    new CommandLine(this), "File " + inputReportMd + " is not a valid Markdown report (missing front matter).");
         }
 
         this.inputReportMd = inputReportMd;
-        // 1. Вельми культурний лог про успішну валідацію
-        log.info("Вихідний матеріал формату Markdown успішно пройшов верифікацію структури.");
+        log.info("Markdown source file successfully verified.");
     }
 
     private File inputReportMd;
@@ -73,31 +78,28 @@ public class BasicCommandLineInterface implements Runnable {
 
     @Override
     public void run() {
-        log.debug("Запускаєм цю шарманку, блядь, в потоці main");
-        // 2. Початок роботи
-        log.info("Розпочато процес обробки звіту. Ласкаво просимо.");
+        log.debug("Starting main execution thread for report generation.");
+        log.info("Report processing initiated. Welcome.");
+
         try {
             if (inputReportMd == null) {
-                log.debug("Юзер провтикав вказати MD, будем шукати rom.md у помойці за шляхом: {}", contextPath);
+                log.debug("No input file specified. Attempting to locate default 'rom.md' in context: {}", contextPath);
                 setInputReportMd(contextPath.resolve("rom.md").toFile());
             }
 
             if (templateFile == null) {
-                log.debug("Темплейта нема, берем вбудований з ресурсів. Надійся, шо він там лежить, сука");
-                // 3. Лог про ресурси
-                log.info("Зовнішній шаблон не знайдено. Використовуємо вбудований еталонний зразок.");
+                log.debug("External template not provided. Falling back to embedded resource.");
+                log.info("Using internal default template for document generation.");
             }
 
             try (InputStream template = templateFile == null ?
                     getClass().getResourceAsStream("/template.docx")
                     : new FileInputStream(templateFile.toFile())) {
 
-                log.debug("Перетворюєм шлях до MD у URI: {}", inputReportMd.toURI());
                 URI romSource = inputReportMd.toURI();
+                log.debug("Resolved ROM source URI: {}", romSource);
 
-                log.debug("Визиваєм магію створення ROM об'єкта");
-                // 4. Початок парсингу моделі
-                log.info("Здійснюється десериалізація контенту та побудова об'єктної моделі звіту.");
+                log.info("Deserializing content and constructing Report Object Model.");
                 basicUsageFacade.process(romSource,
                         contextPath,
                         outputPath,
@@ -105,14 +107,12 @@ public class BasicCommandLineInterface implements Runnable {
                         isDocxGenerate,
                         isPdfGenerate);
 
-                // 7. Тріумфальне завершення
-                log.info("Формування звіту завершено успішно. Результати збережено у: {}", outputPath.getParent());
+                log.info("Report generation successfully completed. Artifacts saved in: {}", outputPath.getParent());
             }
         } catch (Exception e) {
-            log.error("Всьо, пізда, приїхали! Помилка: {}", e.getMessage());
-            // 8. Культурний опис катастрофи
-            log.info("На превеликий жаль, у процесі виконання виникла непередбачувана ситуація. Просимо вибачення за незручності.");
-            log.error("Якась сперма вилізла в Entrypoint, розбирайся нахуй!");
+            log.error("Critical failure during execution: {}", e.getMessage());
+            log.info("An unexpected error occurred during processing. Please review the logs.");
+            log.error("Stack trace for debugging:", e);
         }
     }
 }

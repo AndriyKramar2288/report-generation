@@ -25,45 +25,45 @@ public abstract class TextContainingPhotoBuilder extends PhotoBuilder {
 
         this.toolsSource = toolsSource;
 
-        log.debug("Блядь, стартуєм білд картинки з якимось текстом. Контекст: {}", contextPath);
+        log.debug("Initiating image build process from text content. Context: {}", contextPath);
 
-        log.debug("Визиваєм абстрактну хуйню, хай родить нам текстовий файл");
+        log.debug("Invoking abstract method to retrieve source text file.");
         File textFile = buildTextFile(contextPath);
 
         if (slice != null) {
-            log.debug("Опа, юзер хоче відрізати кусок м'яса: '{}'. Щас будем шинкувати", slice);
+            log.debug("Slice parameter detected: '{}'. Executing content fragmentation.", slice);
             textFile = generateSlicedFile(textFile);
         } else {
-            log.debug("Слайса нема, хаваєм весь файл цілком, як голодні пси");
+            log.debug("No slice defined. Processing the entire file content.");
         }
 
         try {
-            log.debug("Пхаєм цей обрубок у ImageGenerator, хай малює шедевр, сука");
+            log.debug("Sending processed text to ImageGenerator for rendering.");
             File generatedPhoto = toolsSource.generateCodeImage(textFile.getAbsolutePath());
 
             if (slice != null) {
-                log.debug("Ми робили врємєнний обрубок для слайса, пора його прикопати");
+                log.debug("Cleaning up temporary sliced file.");
                 textFile.delete();
             }
 
-            log.debug("Всьо, фотка готова, забирай цю залупу");
+            log.info("Image generation completed successfully.");
             return generatedPhoto;
 
         } catch (Exception e) {
-            log.debug("Пізда рулю, генератор фоток обригався: {}", e.getMessage());
-            throw new RuntimeException(e);
+            log.error("Image generation failed. Source file: {}, Error: {}", textFile.getName(), e.getMessage());
+            throw new RuntimeException("Failed to generate image from text", e);
         }
     }
 
     protected abstract File buildTextFile(Path contextPath) throws IOException;
 
     private File generateSlicedFile(File textFile) throws IOException {
-        log.debug("Читаєм контент файла '{}', шоб порізать його нахуй", textFile.getName());
+        log.debug("Reading file '{}' for content slicing.", textFile.getName());
         String content = Files.readString(textFile.toPath());
 
-        File newTempFile = new File("Рядки [" + slice + "] - " + textFile.getName());
+        File newTempFile = new File("Lines [" + slice + "] - " + textFile.getName());
 
-        log.debug("Ріжем рядки по схемі '{}' і ліпим новий файл", slice);
+        log.debug("Applying line slice scheme '{}' to create a temporary resource.", slice);
         Files.writeString(newTempFile.toPath(), sliceLines(content, slice));
 
         return newTempFile;
@@ -73,7 +73,7 @@ public abstract class TextContainingPhotoBuilder extends PhotoBuilder {
         if (range == null || !range.contains("..")) return content;
 
         String[] lines = content.split("\\r?\\n");
-        int total = lines.length; // Наше "end"
+        int total = lines.length;
 
         String[] parts = range.split("\\.\\.", -1);
 
@@ -88,9 +88,10 @@ public abstract class TextContainingPhotoBuilder extends PhotoBuilder {
                 end = parseIndex(parts[1].trim(), total);
             }
         } catch (Exception e) {
-            return content; // Якщо юзер перемудрив з математикою
+            log.warn("Failed to parse slice range: {}. Returning original content.", range);
+            return content;
         }
-        
+
         start = Math.max(0, Math.min(start, total));
         end = Math.max(0, Math.min(end, total));
 
@@ -99,18 +100,18 @@ public abstract class TextContainingPhotoBuilder extends PhotoBuilder {
         return String.join("\n", Arrays.copyOfRange(lines, start, end));
     }
 
-    // Допоміжний метод для парсингу "end-5" або просто "10"
+    /**
+     * Допоміжний метод для парсингу "end-5" або просто "10"
+     */
     private int parseIndex(String input, int total) {
         String raw = input.toLowerCase().replace(" ", "");
 
         if (raw.contains("end")) {
-            // Обробляємо "end-5" або "end+2" (хоча +2 це дивно, але хай буде)
             String offsetStr = raw.replace("end", "");
             int offset = offsetStr.isEmpty() ? 0 : Integer.parseInt(offsetStr);
             return total + offset;
         }
 
-        // Стара логіка для звичайних чисел
-        return Integer.parseInt(raw) - 1; // -1 бо юзер рахує з одиниці
+        return Integer.parseInt(raw) - 1; // Рахуємо з одиниці для зручності користувача
     }
 }

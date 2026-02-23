@@ -17,6 +17,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Будівельник зображень на основі виводу командної оболонки.
+ * Виконує команди та зберігає результат у тимчасовий файл для подальшої візуалізації.
+ */
 @EqualsAndHashCode(callSuper = true)
 @Data
 public class BashPhotoBuilder extends TextContainingPhotoBuilder {
@@ -29,10 +33,10 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
 
     @Override
     protected File buildTextFile(Path contextPath) throws IOException {
-        log.debug("Запускаєм сесію, щас буде гарячо");
+        log.debug("Initializing interactive shell session for image generation.");
         var resultString = toolsSource.runAllInOneSession(contextPath, runs, hide);
 
-        log.debug("Ліпим врємєнний файл, шоб запхати туди цей брєд");
+        log.debug("Creating temporary file to store shell session output.");
         tempFile = Files.createTempFile("run", ".shell").toFile();
         Files.writeString(tempFile.toPath(), resultString);
 
@@ -41,8 +45,11 @@ public class BashPhotoBuilder extends TextContainingPhotoBuilder {
 
     @Override
     public void close() throws Exception {
-        log.debug("Убираєм за собою гівно, видаляєм файл");
-        if (tempFile != null) tempFile.delete();
+        log.debug("Cleaning up temporary resources: deleting shell output file.");
+        if (tempFile != null && tempFile.exists()) {
+            boolean deleted = tempFile.delete();
+            log.trace("Temporary file deletion status: {}", deleted);
+        }
     }
 
     @Data

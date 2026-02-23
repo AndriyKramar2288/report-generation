@@ -37,36 +37,36 @@ public class ReportGenerationFacade {
      * @throws Exception У разі помилок обробки шаблону або проблем з доступом до файлів.
      */
     public List<File> generate(ReportObjectModel model,
-                                InputStream template,
-                                String outputName,
-                                Path contextPath,
-                                boolean isDocxGenerate,
-                                boolean isPdfGenerate) throws Exception {
+                               InputStream template,
+                               String outputName,
+                               Path contextPath,
+                               boolean isDocxGenerate,
+                               boolean isPdfGenerate) throws Exception {
 
-        log.debug("Блядь, стартуєм глобальну хєрню. Тікай з городу, щас буде генерація!");
+        log.debug("Initiating global report generation process.");
 
         Map<String, PhotoBuilder> photos = new LinkedHashMap<>();
-        log.debug("Згрібаєм всі фотки в одну кучу: баш, текст, картинки. Якийсь вінегрет, сука");
+        log.debug("Collecting all photo builders (bash, text, images) into a unified registry.");
         photos.putAll(model.getPhotos().getBash());
         photos.putAll(model.getPhotos().getText());
         photos.putAll(model.getPhotos().getImages());
 
-        log.debug("Засмоктуєм шаблон '{}', надійся, шо він не обриганий", template);
+        log.debug("Reading template stream for output: {}", outputName);
         byte[] data = Objects.requireNonNull(template).readAllBytes();
 
-        log.debug("Фіксаєм поля, шоб Ворд не вийожувався");
+        log.debug("Performing low-level field correction for MS Word compatibility.");
         data = docxModifierService.loadCorrectField(data);
 
-        log.debug("Пхаєм дані з моделі в шаблон через Velocity. Пливи, плотва!");
+        log.debug("Injecting model data into template using Velocity engine.");
         data = docxModifierService.loadTemplateChanges(data, model);
 
-        log.debug("Час засирати документ картинками. Готуй дишіль!");
+        log.debug("Processing and embedding images into the document.");
         data = docxImagesService.loadImages(data, photos, contextPath);
 
         List<File> outputFiles = new ArrayList<>();
 
         if (isDocxGenerate) {
-            log.debug("Ліпим .docx файл: {}.docx. Хай юзери радуються", outputName);
+            log.debug("Saving generated DOCX file: {}.docx", outputName);
             File docx = contextPath.resolve(outputName + ".docx").toFile();
             outputFiles.add(docx);
             try (FileOutputStream out = new FileOutputStream(docx)) {
@@ -75,7 +75,7 @@ public class ReportGenerationFacade {
         }
 
         if (isPdfGenerate) {
-            log.debug("Конвертим цю парашу в PDF, бо солідні люди ворд не читають");
+            log.debug("Converting document to PDF format: {}.pdf", outputName);
             File pdf = contextPath.resolve(outputName + ".pdf").toFile();
             outputFiles.add(pdf);
             try (FileOutputStream out = new FileOutputStream(pdf)) {
@@ -83,7 +83,7 @@ public class ReportGenerationFacade {
             }
         }
 
-        log.debug("Всьо, блядь, розходимся. Звіт готовий, я спать!");
+        log.info("Report generation successfully completed for: {}", outputName);
         return outputFiles;
     }
 }

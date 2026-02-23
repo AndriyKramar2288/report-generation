@@ -10,15 +10,15 @@
             <report><![CDATA[
 ---
 properties:
-  course_name: "Інструментарій роботи з даними"
-  lab_name: "Очистка даних (Light Test)"
-  lab_purpose: "Перевірка інтеграції без завантаження інтернету."
-  lab_conclusion: "Тест пройшов успішно, трафік зекономлено."
+  course_name: 'Інструментарій роботи з даними'
+  lab_name: 'Очистка даних (Light Test)'
+  lab_purpose: 'Перевірка інтеграції без завантаження інтернету.'
+  lab_conclusion: 'Тест пройшов успішно, трафік зекономлено.'
   lab_number: 4
-  student_name: "Тестовий С.Т."
-  student_group: "Т Е С Т"
-  teacher_name: "асис. Оптимізатор В.М."
-  departament_name: "Кафедра швидких рішень"
+  student_name: 'Тестовий Т.Т.'
+  student_group: 'Група-99'
+  teacher_name: 'проф. Степаненко С.С.'
+  departament_name: 'Кафедра системного аналізу'
 codes:
 - "lab4_clean.py"
 photos:
@@ -27,7 +27,6 @@ photos:
       label: "Процес очищення даних"
       slice: "0..50"
       runs:
-        # Запускаємо системний пітон (або з venv, якщо він вже є, але тут просто python)
         - command: 'python lab4_clean.py'
   text:
     report_file:
@@ -59,8 +58,7 @@ import csv
 import sys
 from pathlib import Path
 
-# Генеруємо мінімально валідний BMP файл (щоб Word не лаявся, що картинка бита)
-# Це білий квадрат 1x1 піксель
+# Генеруємо мінімально валідний BMP файл
 bmp_data = bytes([
     0x42, 0x4D, 0x3A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00, 0x28, 0x00,
     0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x18, 0x00, 0x00, 0x00,
@@ -71,48 +69,29 @@ with open("aboba.jpg", "wb") as f:
     f.write(bmp_data)
 print("Graph generated: aboba.jpg")
 
-# НАЛАШТУВАННЯ
 INPUT_FILE = "variant05.csv"
 OUTPUT_FILE = "clean_variant05.csv"
 REPORT_FILE = "report_variant05.txt"
 
 def main():
     print("--- Lab 4: Data Cleaning (Emulated) ---")
-
-    # Читання CSV (стандартна ліба)
     rows = []
     with open(INPUT_FILE, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         fieldnames = reader.fieldnames
         for row in reader:
             rows.append(row)
-
     print(f"1. Initial Rows: {len(rows)}")
-
-    # Емуляція очищення (просто фільтруємо пусті)
     clean_rows = [r for r in rows if r['amount'] and r['amount'].strip()]
     dropped = len(rows) - len(clean_rows)
-
     print(f"2. Dropped empty amounts: {dropped}")
-    print(f"   Final Shape: ({len(clean_rows)}, {len(fieldnames)})")
-
-    # Збереження
     with open(OUTPUT_FILE, "w", encoding="utf-8", newline='') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(clean_rows)
-
-    # Звіт
-    report = f"""Lab 4 Report
-    Initial: {len(rows)}
-    Dropped: {dropped}
-    Final: {len(clean_rows)}
-    Graph: aboba.jpg created.
-    """
-
+    report = f"Lab 4 Report\nInitial: {len(rows)}\nDropped: {dropped}\nFinal: {len(clean_rows)}"
     with open(REPORT_FILE, "w", encoding="utf-8") as f:
         f.write(report)
-
     print("\nReport saved.")
 
 if __name__ == "__main__":
@@ -136,15 +115,15 @@ if __name__ == "__main__":
             <report><![CDATA[
 ---
 properties:
-  course_name: "Інструментарій роботи з даними"
-  lab_name: "Очистка даних (Light Test - COPY)"
-  lab_purpose: "Перевірка інтеграції (Дубль)."
-  lab_conclusion: "Тест 2 пройшов успішно."
+  course_name: 'Інструментарій роботи з даними'
+  lab_name: 'Очистка даних (Light Test - COPY)'
+  lab_purpose: 'Перевірка інтеграції (Дубль).'
+  lab_conclusion: 'Тест 2 пройшов успішно.'
   lab_number: 5
-  student_name: "Тестовий С.Т."
-  student_group: "Т Е С Т"
-  teacher_name: "асис. Оптимізатор В.М."
-  departament_name: "Кафедра швидких рішень"
+  student_name: 'Тестовий Т.Т.'
+  student_group: 'Група-99'
+  teacher_name: 'проф. Степаненко С.С.'
+  departament_name: 'Кафедра системного аналізу'
 codes:
 - "lab4_clean.py"
 photos:
@@ -180,7 +159,6 @@ import csv
 import sys
 from pathlib import Path
 
-# Генеруємо мінімально валідний BMP файл (щоб Word не лаявся)
 bmp_data = bytes([
     0x42, 0x4D, 0x3A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00, 0x28, 0x00,
     0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x18, 0x00, 0x00, 0x00,
@@ -189,34 +167,26 @@ bmp_data = bytes([
 ])
 with open("aboba.jpg", "wb") as f:
     f.write(bmp_data)
-print("Graph generated: aboba.jpg")
 
-# НАЛАШТУВАННЯ
 INPUT_FILE = "variant05.csv"
 OUTPUT_FILE = "clean_variant05.csv"
 REPORT_FILE = "report_variant05.txt"
 
 def main():
     print("--- Lab 4: Data Cleaning (Emulated) ---")
-
     rows = []
     with open(INPUT_FILE, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         fieldnames = reader.fieldnames
         for row in reader:
             rows.append(row)
-
-    print(f"1. Initial Rows: {len(rows)}")
     clean_rows = [r for r in rows if r['amount'] and r['amount'].strip()]
     dropped = len(rows) - len(clean_rows)
-    print(f"2. Dropped empty amounts: {dropped}")
-
     with open(OUTPUT_FILE, "w", encoding="utf-8", newline='') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(clean_rows)
-
-    report = f"Lab Report\nDropped: {dropped}\nGraph: aboba.jpg created."
+    report = f"Lab Report\nDropped: {dropped}"
     with open(REPORT_FILE, "w", encoding="utf-8") as f:
         f.write(report)
     print("\nReport saved.")

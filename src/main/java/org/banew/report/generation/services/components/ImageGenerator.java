@@ -37,10 +37,10 @@ public class ImageGenerator {
      */
     public synchronized File generateCodeImage(String inputPath) throws IOException, InterruptedException {
 
-        log.debug("Так, блядь, готуємся фоткати код. Вхідна залупа: {}", inputPath);
-        log.debug("Робоча каморка для npm: {}", propertiesSource.getNpmDir().getAbsolutePath());
+        log.debug("Preparing to capture code image. Input source path: {}", inputPath);
+        log.debug("NPM working directory: {}", propertiesSource.getNpmDir().getAbsolutePath());
 
-        log.debug("Запрягаєм npx carbon-now. Хай ця паскуда малює нам красу через headless-браузер");
+        log.debug("Invoking npx carbon-now. Starting headless browser for rendering...");
 
         List<String> command = new ArrayList<>();
         if (IS_WINDOWS) {
@@ -54,10 +54,10 @@ public class ImageGenerator {
 
         ProcessBuilder pb = new ProcessBuilder(command);
 
-        log.debug("Наслєдуєм IO, шоб бачити в консолі, як ця сука мучиться");
+        log.debug("Inheriting IO streams to monitor Node.js process output.");
         pb.directory(propertiesSource.getNpmDir());
 
-        log.debug("Стартуєм процес. Тікай з городу, щас Carbon почне жерати оперативу!");
+        log.debug("Starting external process: carbon-now (headless mode).");
         Process process = pb.start();
 
         try (BufferedReader reader = new BufferedReader(
@@ -71,11 +71,11 @@ public class ImageGenerator {
         int exitCode = process.waitFor();
 
         if (exitCode == 0) {
-            log.debug("Заєбісь! Процес вижив і не обригався. Шукаєм, де ця падла кинула файл");
+            log.debug("Process execution successful. Searching for the generated output file.");
             return Objects.requireNonNull(findGeneratedFile());
         }
         else {
-            log.debug("Пізда рулю! Carbon вернув якийсь лєвий код: {}. Розбирайся сам, чо воно здохло", exitCode);
+            log.error("Carbon-now execution failed with exit code: {}. Check Node.js environment.", exitCode);
             throw new RuntimeException("Process returned non-zero exit code: " + exitCode);
         }
     }
@@ -86,15 +86,15 @@ public class ImageGenerator {
      */
     @Nullable
     private File findGeneratedFile() {
-        log.debug("Шманаєм папку '{}' на прєдмет свіжих .png фоток", propertiesSource.getNpmDir().getName());
+        log.debug("Scanning directory '{}' for newly generated PNG files.", propertiesSource.getNpmDir().getName());
         File[] files = propertiesSource.getNpmDir().listFiles((d, name) -> name.endsWith(".png"));
 
         if (files == null || files.length == 0) {
-            log.debug("Ну і де фотка? Обійшов всьо — ніхуя нема. Нас найбали, розходимся!");
+            log.warn("No generated image files found in the target directory.");
             return null;
         }
 
-        log.debug("Надибали {} штук. Щас виберем ту, шо сама свіжа, як пиріжок з лівером", files.length);
+        log.debug("Found {} potential files. Selecting the most recent one based on modification time.", files.length);
         File latest = files[0];
         for (File f : files) {
             if (f.lastModified() > latest.lastModified()) {
@@ -102,7 +102,7 @@ public class ImageGenerator {
             }
         }
 
-        log.debug("Ось вона, наша лапочка: '{}'. Тягнем її в звіт, поки не протухла", latest.getName());
+        log.info("Successfully identified the generated image: '{}'", latest.getName());
         return latest;
     }
 }

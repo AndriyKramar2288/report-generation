@@ -29,16 +29,21 @@ public class BasicUsageFacade {
                         InputStream template,
                         boolean isDocxGenerate,
                         boolean isPdfGenerate) throws Exception {
+
+        log.debug("Starting Report Object Model (ROM) creation from source: {}", romSource);
         var rom = ReportObjectModel.create(romSource, contextPath);
+
         projectionValidator.validate(rom);
-        log.debug("Єбать, воно вижило! Ось який ROM ми зліпили: {}", rom);
-        // 5. Успіх побудови моделі
-        log.info("Об'єктна модель успішно сформована. Кількість знайдених компонентів: {}",
+        log.debug("ROM validation successful. Model state: {}", rom);
+
+        // 5. Success of model building
+        log.info("Object model successfully formed. Components count: {}",
                 (rom.getPhotos().getBash().size() + rom.getCodeFileNameToContentMap().size()));
 
-        log.debug("Запускаєм головний завод по генерації гівна. DOCX: {}, PDF: {}", isDocxGenerate, isPdfGenerate);
-        // 6. Фінальний крок
-        log.info("Переходимо до стадії фінальної візуалізації та формування вихідних документів.");
+        log.debug("Initiating document generation process. Target formats - DOCX: {}, PDF: {}", isDocxGenerate, isPdfGenerate);
+
+        // 6. Final step
+        log.info("Proceeding to final visualization and output document formation.");
 
         reportGenerationFacade.generate(Objects.requireNonNull(rom),
                 Objects.requireNonNull(template),
