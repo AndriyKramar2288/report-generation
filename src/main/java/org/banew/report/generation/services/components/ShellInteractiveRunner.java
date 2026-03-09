@@ -30,7 +30,7 @@ import java.util.Map;
 public class ShellInteractiveRunner {
 
     private static final Logger log = LoggerFactory.getLogger(ShellInteractiveRunner.class);
-
+    private static final int TERMINATOR_LIVE_TIME_MILLIS = 3000;
     private static final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase().contains("win");
 
     /**
@@ -249,7 +249,7 @@ public class ShellInteractiveRunner {
                     long birthTime = victimsRegistry.get(hwnd);
                     long age = currentTime - birthTime;
 
-                    if (age > 2500) {
+                    if (age > TERMINATOR_LIVE_TIME_MILLIS) {
                         log.debug("Window for PID {} exceeded lifetime ({} ms). Closing window.", targetPid, age);
                         User32.INSTANCE.PostMessage(hwnd, 0x0112, new WinDef.WPARAM(0xF060), new WinDef.LPARAM(0));
                         victimsRegistry.remove(hwnd);
