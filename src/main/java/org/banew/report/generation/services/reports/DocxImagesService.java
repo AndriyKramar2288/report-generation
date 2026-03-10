@@ -81,7 +81,7 @@ public class DocxImagesService {
                                             entry.getValue().getName(), Units.toEMU(350),
                                             Units.toEMU(computeImageHeightByWidth(entry.getValue(), 350)));
                                     run.addBreak();
-                                    run.setText("Рис. " + ++imageIndex + ": " + images.get(entry.getKey()).getLabel());
+                                    run.setText("Рис. " + ++imageIndex + " " + images.get(entry.getKey()).getLabel());
                                     run.addBreak();
                                 }
                             }

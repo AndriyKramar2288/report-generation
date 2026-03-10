@@ -49,7 +49,7 @@ public class ShellInteractiveRunner {
      */
     public String runAllInOneSession(Path context, List<? extends BashRun> runs, boolean hide) throws IOException {
         log.debug("Initializing shell session. Operating System - Windows: {}", IS_WINDOWS);
-        String shellCmd = IS_WINDOWS ? "cmd.exe" : "zsh";
+        String shellCmd = IS_WINDOWS ? "powershell.exe" : "zsh";
         ProcessBuilder pb = new ProcessBuilder(shellCmd);
         pb.environment().put("PYTHONIOENCODING", "utf-8");
         pb.environment().put("LANG", "en_US.UTF-8");
