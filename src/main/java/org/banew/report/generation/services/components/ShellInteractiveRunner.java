@@ -100,7 +100,7 @@ public class ShellInteractiveRunner {
                 }
 
                 log.debug("Injecting command completion marker.");
-                String errorLevelCmd = IS_WINDOWS ? "echo ERROR_LEVEL:%ERRORLEVEL%" : "echo ERROR_LEVEL:$?";
+                String errorLevelCmd = IS_WINDOWS ? "echo ERROR_LEVEL:$LASTEXITCODE" : "echo ERROR_LEVEL:$?";
                 writer.write(errorLevelCmd + "\n");
                 writer.write("echo " + uniqueMarker + "\n");
                 writer.flush();
