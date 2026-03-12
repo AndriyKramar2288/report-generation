@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
@@ -49,10 +50,18 @@ public class ShellInteractiveRunner {
      */
     public String runAllInOneSession(Path context, List<? extends BashRun> runs, boolean hide) throws IOException {
         log.debug("Initializing shell session. Operating System - Windows: {}", IS_WINDOWS);
-        String shellCmd = IS_WINDOWS ? "powershell.exe" : "zsh";
-        ProcessBuilder pb = new ProcessBuilder(shellCmd);
+
+        ProcessBuilder pb;
+        if (IS_WINDOWS) {
+            pb = new ProcessBuilder("powershell.exe", "-NoLogo", "-NoExit", "-Command",
+                    "chcp 65001 | Out-Null; $OutputEncoding = [System.Text.Encoding]::UTF8; [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; [Console]::InputEncoding = [System.Text.Encoding]::UTF8");
+        } else {
+            pb = new ProcessBuilder("zsh");
+        }
+
         pb.environment().put("PYTHONIOENCODING", "utf-8");
         pb.environment().put("LANG", "en_US.UTF-8");
+        pb.environment().put("JAVA_TOOL_OPTIONS", "-Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8");
         pb.directory(context.toFile());
         pb.redirectErrorStream(true);
 
@@ -68,9 +77,9 @@ public class ShellInteractiveRunner {
             }
 
             BufferedWriter writer = new BufferedWriter(
-                    new OutputStreamWriter(shell.getOutputStream()));
+                    new OutputStreamWriter(shell.getOutputStream(), StandardCharsets.UTF_8));
             BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(shell.getInputStream()));
+                    new InputStreamReader(shell.getInputStream(), StandardCharsets.UTF_8));
 
             String uniqueMarker = "COMMAND_FINISHED_MARKER";
             String line;
