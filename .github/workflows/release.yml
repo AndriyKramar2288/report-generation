@@ -1,4 +1,4 @@
-name: Build and Release Phantom Installer
+name: Build and Release SPERMATOZOID Installer
 
 # Запускаємо цей екшен ТІЛЬКИ тоді, коли ти створюєш новий тег версії (наприклад, v1.0.0)
 on:
@@ -45,7 +45,7 @@ jobs:
           # Назва релізу буде братися з назви тегу (наприклад, Release v1.0.0)
           name: Release ${{ github.ref_name }}
           # Вказуємо шлях до нашого свіжого інсталятора
-          files: release/installer/Phantom_Setup.exe
+          files: release/installer/reportsSetup.exe
           # Можна додати автоматичний опис
           body: "Автоматична збірка інсталятора для версії ${{ github.ref_name }}."
           # Прапорець, що це не драфт
