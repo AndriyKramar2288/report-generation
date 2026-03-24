@@ -222,22 +222,70 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.panteleyev</groupId>
+                <artifactId>jpackage-maven-plugin</artifactId>
+                <version>1.6.4</version>
+                <configuration>
+                    <name>reports</name>
+                    <appVersion>1.0.0</appVersion>
+                    <vendor>Banew</vendor>
+                    <type>APP_IMAGE</type>
+                    <destination>${project.basedir}/release</destination>
+                    <input>${project.build.directory}</input>
+                    <mainJar>report-generation-1.0.jar</mainJar>
+                    <mainClass>org.banew.report.generation.cli.Entrypoint</mainClass>
+                    <winConsole>true</winConsole>
+                    <javaOptions>
+                        <option>-Dfile.encoding=UTF-8</option>
+                    </javaOptions>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>generate-jpackage</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jpackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-npm-folder</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <copy todir="${project.basedir}/release/reports/npm">
+                                    <fileset dir="${project.basedir}/npm"/>
+                                </copy>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.1</version>
                 <executions>
                     <execution>
-                        <id>run-my-shell-command</id>
+                        <id>run-npm-install</id>
+                        <phase>package</phase>
                         <goals>
                             <goal>exec</goal>
                         </goals>
-                        <phase>validate</phase>
                         <configuration>
                             <executable>npm</executable>
                             <arguments>
                                 <argument>install</argument>
                             </arguments>
-                            <workingDirectory>${project.basedir}/npm</workingDirectory>
+                            <workingDirectory>${project.basedir}/release/reports/npm</workingDirectory>
                         </configuration>
                     </execution>
                 </executions>

@@ -1,0 +1,55 @@
+name: Build and Release Phantom Installer
+
+# Запускаємо цей екшен ТІЛЬКИ тоді, коли ти створюєш новий тег версії (наприклад, v1.0.0)
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    # Обов'язково беремо Windows-машину, бо нам треба зібрати .exe і запустити Inno Setup
+    runs-on: windows-latest
+
+    # Даємо дозволи боту GitHub на створення релізу та завантаження файлів
+    permissions:
+      contents: write
+
+    steps:
+      - name: 📥 Завантаження коду репозиторію
+        uses: actions/checkout@v4
+
+      - name: ☕ Налаштування Java (JDK 21)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21' # 21 LTS версія чудово підходить для jpackage
+          cache: 'maven'
+
+      - name: 🟢 Налаштування Node.js (для npm install)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 🚀 Збірка проєкту (Maven + jpackage + npm)
+        # Ця команда виконає весь наш ланцюжок із pom.xml, який ми так довго налаштовували
+        run: mvn clean package -DskipTests
+
+      - name: 📦 Створення інсталятора через Inno Setup
+        # На Windows-раннерах Inno Setup вже встановлений. iscc - це його консольний компілятор
+        run: iscc installer.iss
+
+      - name: 🌐 Створення GitHub Release та завантаження .exe
+        uses: softprops/action-gh-release@v2
+        with:
+          # Назва релізу буде братися з назви тегу (наприклад, Release v1.0.0)
+          name: Release ${{ github.ref_name }}
+          # Вказуємо шлях до нашого свіжого інсталятора
+          files: release/installer/Phantom_Setup.exe
+          # Можна додати автоматичний опис
+          body: "Автоматична збірка інсталятора для версії ${{ github.ref_name }}."
+          # Прапорець, що це не драфт
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
