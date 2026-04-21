@@ -294,7 +294,7 @@
                         </goals>
                         <configuration>
                             <target>
-                                <copy todir="${project.basedir}/release/reports/npm">
+                                <copy todir="${project.basedir}/release/reports/app/npm">
                                     <fileset dir="${project.basedir}/npm"/>
                                 </copy>
                             </target>
@@ -318,7 +318,7 @@
                             <arguments>
                                 <argument>install</argument>
                             </arguments>
-                            <workingDirectory>${project.basedir}/release/reports/npm</workingDirectory>
+                            <workingDirectory>${project.basedir}/release/reports/app/npm</workingDirectory>
                         </configuration>
                     </execution>
                 </executions>
