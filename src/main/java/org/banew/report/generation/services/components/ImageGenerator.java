@@ -30,6 +30,9 @@ public class ImageGenerator {
 
     private static final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase().contains("win");
 
+    // Директорія для збереження згенерованих фото (користувацька тека Temp)
+    private final File outputDir = new File(System.getProperty("java.io.tmpdir"), "report-gen-images");
+
     /**
      * Генерує файл зображення з вмістом деякого файлу та автоматично обрізає баговані відступи.
      * @param inputPath абсолютний шлях до будь-якого текстового файлу
@@ -41,6 +44,11 @@ public class ImageGenerator {
         log.debug("Preparing to capture code image. Input source path: {}", inputPath);
         log.debug("NPM working directory: {}", propertiesSource.getNpmDir().getAbsolutePath());
 
+        // Створюємо тимчасову директорію, якщо її ще не існує
+        if (!outputDir.exists()) {
+            outputDir.mkdirs();
+        }
+
         log.debug("Invoking npx carbon-now. Starting headless browser for rendering...");
 
         List<String> command = new ArrayList<>();
@@ -51,12 +59,17 @@ public class ImageGenerator {
         command.add("npx");
         command.add("carbon-now");
         command.add(Objects.requireNonNull(inputPath));
+        command.add("-l"); // Вказуємо Location для збереження файлу
+        command.add(outputDir.getAbsolutePath());
         command.add("--headless");
 
         ProcessBuilder pb = new ProcessBuilder(command);
 
         log.debug("Inheriting IO streams to monitor Node.js process output.");
         pb.directory(propertiesSource.getNpmDir());
+
+        // ВАЖЛИВО: Перенаправляємо потік помилок у стандартний потік, щоб бачити краші Puppeteer
+        pb.redirectErrorStream(true);
 
         log.debug("Starting external process: carbon-now (headless mode).");
         Process process = pb.start();
@@ -75,7 +88,6 @@ public class ImageGenerator {
             log.debug("Process execution successful. Searching for the generated output file.");
             File generated = Objects.requireNonNull(findGeneratedFile());
 
-            // ВАЖЛИВО: Пропускаємо фотку через наш "хірургічний" обрізувач багів Карбону
             return trimCarbonBug(generated);
         }
         else {
@@ -85,13 +97,13 @@ public class ImageGenerator {
     }
 
     /**
-     * Обшукує усю {@code propertiesSource.getNpmDir()} з метою знайти щойно згенероване фото
+     * Обшукує тимчасову директорію з метою знайти щойно згенероване фото
      * @return згенероване фото
      */
     @Nullable
     private File findGeneratedFile() {
-        log.debug("Scanning directory '{}' for newly generated PNG files.", propertiesSource.getNpmDir().getName());
-        File[] files = propertiesSource.getNpmDir().listFiles((d, name) -> name.endsWith(".png"));
+        log.debug("Scanning directory '{}' for newly generated PNG files.", outputDir.getName());
+        File[] files = outputDir.listFiles((d, name) -> name.endsWith(".png"));
 
         if (files == null || files.length == 0) {
             log.warn("No generated image files found in the target directory.");
@@ -110,11 +122,6 @@ public class ImageGenerator {
         return latest;
     }
 
-    /**
-     * Хірургічний алгоритм для видалення "страшного відступу" (багу carbon-now).
-     * Шукає гігантський блок однакових горизонтальних ліній пікселів і вирізає його,
-     * зберігаючи тіні, закруглені кути та рамки вікна на дні.
-     */
     private File trimCarbonBug(File imageFile) throws IOException {
         BufferedImage img = ImageIO.read(imageFile);
         if (img == null) return imageFile;
@@ -122,7 +129,6 @@ public class ImageGenerator {
         int width = img.getWidth();
         int height = img.getHeight();
 
-        // 1. Кешуємо всі рядки пікселів для швидкого порівняння
         int[][] rows = new int[height][width];
         for (int y = 0; y < height; y++) {
             img.getRGB(0, y, width, 1, rows[y], 0, width);
@@ -133,8 +139,6 @@ public class ImageGenerator {
         int currentSeqStart = -1;
         int currentSeqLength = 0;
 
-        // 2. Шукаємо найдовшу послідовність АБСОЛЮТНО однакових рядків
-        // Це і є та сама розтягнута порожня ділянка фону
         for (int y = 1; y < height; y++) {
             if (Arrays.equals(rows[y], rows[y - 1])) {
                 if (currentSeqLength == 0) {
@@ -156,9 +160,8 @@ public class ImageGenerator {
             maxSeqStart = currentSeqStart;
         }
 
-        // 3. Якщо є порожній блок висотою більше 60 пікселів - це точно баг Карбону
         if (maxSeqLength > 60) {
-            int keepPadding = 30; // Залишаємо 30 пікселів фону для естетики (щоб текст не бився в дно)
+            int keepPadding = 30;
             int removeCount = maxSeqLength - keepPadding;
 
             if (removeCount > 0) {
@@ -167,11 +170,9 @@ public class ImageGenerator {
                 BufferedImage newImg = new BufferedImage(width, newHeight, BufferedImage.TYPE_INT_ARGB);
                 Graphics2D g = newImg.createGraphics();
 
-                // Малюємо верхню частину (весь код + трохи порожнього простору)
                 int topPartHeight = maxSeqStart + keepPadding;
                 g.drawImage(img.getSubimage(0, 0, width, topPartHeight), 0, 0, null);
 
-                // Малюємо нижню частину (заокруглені кути вікна та тінь), склеюючи їх
                 int bottomPartY = maxSeqStart + maxSeqLength;
                 int bottomPartHeight = height - bottomPartY;
                 g.drawImage(img.getSubimage(0, bottomPartY, width, bottomPartHeight), 0, topPartHeight, null);
