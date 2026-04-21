@@ -21,54 +21,43 @@ import java.util.Objects;
  * Дозволяє генерувати файні фото з вмістом деякого файлу.
  * <b>Thread-Safe</b>
  */
-@RequiredArgsConstructor(onConstructor_ =  @Inject)
+@RequiredArgsConstructor(onConstructor_ = @Inject)
 @Singleton
 public class ImageGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(ImageGenerator.class);
-    private final PropertiesSource propertiesSource;
-
     private static final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase().contains("win");
 
-    // Директорія для збереження згенерованих фото (користувацька тека Temp)
+    private final PropertiesSource propertiesSource;
     private final File outputDir = new File(System.getProperty("java.io.tmpdir"), "report-gen-images");
 
-    /**
-     * Генерує файл зображення з вмістом деякого файлу та автоматично обрізає баговані відступи.
-     * @param inputPath абсолютний шлях до будь-якого текстового файлу
-     * @return вихідне зображення
-     * @throws IOException у разі, якщо не буде знайдено фото
-     */
     public synchronized File generateCodeImage(String inputPath) throws IOException, InterruptedException {
 
         log.debug("Preparing to capture code image. Input source path: {}", inputPath);
-        log.debug("NPM working directory: {}", propertiesSource.getNpmDir().getAbsolutePath());
 
-        // Створюємо тимчасову директорію, якщо її ще не існує
         if (!outputDir.exists()) {
             outputDir.mkdirs();
         }
 
-        log.debug("Invoking npx carbon-now. Starting headless browser for rendering...");
+        log.debug("Starting headless browser for rendering in Temp directory...");
 
         List<String> command = new ArrayList<>();
+
         if (IS_WINDOWS) {
             command.add("cmd.exe");
             command.add("/c");
+            command.add(new File(propertiesSource.getNpmDir(), "node_modules\\.bin\\carbon-now.cmd").getAbsolutePath());
+        } else {
+            // Linux/Mac
+            command.add(new File(propertiesSource.getNpmDir(), "node_modules/.bin/carbon-now").getAbsolutePath());
         }
-        command.add("npx");
-        command.add("carbon-now");
+
         command.add(Objects.requireNonNull(inputPath));
-        command.add("-l"); // Вказуємо Location для збереження файлу
-        command.add(outputDir.getAbsolutePath());
         command.add("--headless");
 
         ProcessBuilder pb = new ProcessBuilder(command);
 
-        log.debug("Inheriting IO streams to monitor Node.js process output.");
-        pb.directory(propertiesSource.getNpmDir());
-
-        // ВАЖЛИВО: Перенаправляємо потік помилок у стандартний потік, щоб бачити краші Puppeteer
+        pb.directory(outputDir);
         pb.redirectErrorStream(true);
 
         log.debug("Starting external process: carbon-now (headless mode).");
@@ -87,19 +76,13 @@ public class ImageGenerator {
         if (exitCode == 0) {
             log.debug("Process execution successful. Searching for the generated output file.");
             File generated = Objects.requireNonNull(findGeneratedFile());
-
             return trimCarbonBug(generated);
-        }
-        else {
-            log.error("Carbon-now execution failed with exit code: {}. Check Node.js environment.", exitCode);
+        } else {
+            log.error("Carbon-now execution failed with exit code: {}.", exitCode);
             throw new RuntimeException("Process returned non-zero exit code: " + exitCode);
         }
     }
 
-    /**
-     * Обшукує тимчасову директорію з метою знайти щойно згенероване фото
-     * @return згенероване фото
-     */
     @Nullable
     private File findGeneratedFile() {
         log.debug("Scanning directory '{}' for newly generated PNG files.", outputDir.getName());

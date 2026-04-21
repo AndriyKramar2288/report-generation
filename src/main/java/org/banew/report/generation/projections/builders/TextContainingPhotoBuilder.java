@@ -61,7 +61,7 @@ public abstract class TextContainingPhotoBuilder extends PhotoBuilder {
         log.debug("Reading file '{}' for content slicing.", textFile.getName());
         String content = Files.readString(textFile.toPath());
 
-        File newTempFile = new File("Lines [" + slice + "] - " + textFile.getName());
+        File newTempFile = new File(System.getProperty("java.io.tmpdir"), "sliced_" + System.nanoTime() + "_" + textFile.getName());
 
         log.debug("Applying line slice scheme '{}' to create a temporary resource.", slice);
         Files.writeString(newTempFile.toPath(), sliceLines(content, slice));
